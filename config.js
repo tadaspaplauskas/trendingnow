@@ -7,6 +7,8 @@ config.twitter = {
     access_token_secret: 'DREtpcSvQpnz080qtHKZWXpRDFfbvRxdAIzBBIgqL3hxN'
 };
 
-//config.mongodb.url = 'mongodb://192.168.56.101:27017/twitter';
+config.mongodb = {
+    url: 'mongodb://127.0.0.1:27017/twitter_feed'
+};
 
 module.exports = config;
