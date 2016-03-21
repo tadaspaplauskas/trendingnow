@@ -7,6 +7,43 @@ var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
 var url = config.mongodb.url;
+var collection;
+
+/*** helpers ***/
+
+// remove punctuation from tweets
+String.prototype.removePunctuation = function ()
+{
+    return this.replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
+};
+
+// prepare keywords array (used for search)
+var getLowerCaseKeywordsArray = function (str)
+{
+    return str.toLowerCase()
+        .removePunctuation()
+        .trim()
+        .split(' ')
+        .filter(String); //remove empty elements
+};
+
+// prepare keywords array (used for representation. maybe?)
+var getKeywordsArray = function (str)
+{
+    return str
+        .removePunctuation()
+        .trim()
+        .split(' ')
+        .filter(String); //remove empty elements
+};
+
+// get current timestamp in seconds
+var timestamp = function() {
+    return Math.round(Date.now() / 1000);
+};
+
+/*** helpers end ***/
+
 
 
 var insertTweet = function(db, tweet)
@@ -29,30 +66,13 @@ var insertTweet = function(db, tweet)
     }
 };
 
-var getLowerCaseKeywordsArray = function (str)
-{
-    return str.toLowerCase()
-        .replace(/[^a-zA-Z0-9 #]/g, '')
-        .trim()
-        .split(' ')
-        .filter(String); //remove empty elements
-};
-
-var getKeywordsArray = function (str)
-{
-    return str.replace(/[^a-zA-Z0-9 #]/g, '')
-        .trim()
-        .split(' ')
-        .filter(String); //remove empty elements
-};
-
-var timestamp = function() {
-    return Math.round(Date.now() / 1000);
-};
+/*** connect twittter stream to mongodb ***/
 
 var setupStreamToDB = function(err, db) {
     assert.equal(null, err);
     console.log("Connected to server.");
+
+    collection = db.collection('tweets');
 
     //remove records older than 24hours
     var cleaning = setInterval(function(db)
@@ -62,14 +82,13 @@ var setupStreamToDB = function(err, db) {
         });
     }, 60 * 1000, db);
 
-    client.stream('statuses/sample', function(stream) {
-
-        //setTimeout(function () { process.exit(); }, 3600 * 1000); //quit after an hour
-
+    client.stream('statuses/sample', function(stream)
+    {
         stream.on('data', function(tweet) {
             if (tweet.text !== undefined)
             {
                 insertTweet(db, tweet);
+                //console.log(tweet.text);
             }
         });
 
@@ -77,26 +96,81 @@ var setupStreamToDB = function(err, db) {
                 throw error;
         });
     });
+
+    setupWeb(db); //start web server
 };
-
-
 
 MongoClient.connect(url, setupStreamToDB);
 
-//web server
-var express = require('express');
-var web = express();
+/*** search happens here ***/
 
-web.get('/', function (req, res) {
-    res.send('Hello World!');
+var searchKeywords = function(db, query, next)
+{
+    var keywords = getLowerCaseKeywordsArray(query);
+    //{ $and: [ {keywords: "' + ['look', 'here'].join('" } , { keywords: "') + '" } ] }'
+    collection.find({
+        keywords_lower: {
+            $all:  keywords
+        }
+    }).toArray(
+        function(err, result) // do something with results, count stuff or smth
+        {
+            assert.equal(err, null);
 
-    console.log(req);
-});
+            // process the results, count keywords
 
-web.get('/search', function (req, res) {
-    res.send('Search pls ' + req.query.q);
-});
+            var dictionary = [];
 
-web.listen(80, function () {
-    console.log('Example app listening on port 80!');
-});
+            // every record
+            /*for (i = 0; i <= result.length; i++)
+            {
+                // every keyword
+                var record = result[i].keywords_lower;
+
+                for (j = 0; j <= record.length; j++)
+                {
+                    var keyword = record[j];
+
+                    if (dictionary[keyword] !== undefined)
+                        dictionary[keyword]++;
+                    else
+                        dictionary[keyword] = 1;
+                }
+            }
+
+            var max = 0;// max js integer val
+
+            for (n = 0; n <= dictionary.length; n++)
+            {
+                if ()
+            }*/
+
+            next(result);
+        });
+};
+
+/*** web server and requests handling ***/
+var setupWeb = function (db)
+{
+    var express = require('express');
+    var web = express();
+
+    // index
+    web.get('/', function (req, res) {
+        res.send('Hello and welcome to the index page. Use /search?q= to look up some stuff');
+    });
+
+    //search
+    web.get('/search', function (req, res) {
+        var query = req.query.q.removePunctuation();
+
+        searchKeywords(db, query, function(result)
+        {
+            res.send(JSON.stringify(result));
+        });
+    });
+
+    web.listen(80, function () {
+        console.log('Example app listening on port 80!');
+    });
+};
