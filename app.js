@@ -1,6 +1,7 @@
 #!/usr/bin/env nodejs
 
 var config = require('./config');
+var helpers = require('./helpers');
 
 var express = require('express');
 var Twitter = require('twitter');
@@ -11,52 +12,6 @@ var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
 
 var forbiddenWords = config.forbiddenWords;
-
-/*** helpers ***/
-
-// remove punctuation from tweets
-String.prototype.removePunctuation = function ()
-{
-    return this.replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
-};
-
-// prepare keywords array (used for search)
-var getLowerCaseKeywordsArray = function (str)
-{
-    return str.toLowerCase()
-        .removePunctuation()
-        .trim()
-        .split(' ')
-        .filter(String); //remove empty elements
-};
-
-// prepare keywords array (used for representation. maybe?)
-var getKeywordsArray = function (str)
-{
-    return str
-        .removePunctuation()
-        .trim()
-        .split(' ')
-        .filter(String); //remove empty elements
-};
-
-// get current timestamp in seconds
-var timestamp = function()
-{
-    return Math.round(Date.now() / 1000);
-};
-
-var keepValidKeywords = function (keywords, forbidden) //removes links and most common words
-{
-    return keywords.filter(function(keyword)
-    {
-        return (forbidden.indexOf(keyword) === -1 && isNaN(keyword) && keyword.substring(0, 4) !== 'http');
-    });
-};
-
-/*** helpers end ***/
-
-
 
 var insertTweet = function(tweetsCol, keywords, tweet)
 {
@@ -86,7 +41,10 @@ var trackHashtags = function(hashtagsCol, keywords)
             var updateObj = {};
             updateObj['hours.' + currentHour] = 1;
 
-            hashtagsCol.updateOne( { hashtag: hashtag }, { $inc: updateObj }, { upsert: true },
+            hashtagsCol.updateOne(
+                { hashtag: hashtag },
+                { $inc: updateObj, $set: { updated_at: new Date() } },
+                { upsert: true },
                 function(err, result) { assert.equal(err, null); });
         }
     }
@@ -95,65 +53,16 @@ var trackHashtags = function(hashtagsCol, keywords)
 /*** connect twittter stream to mongodb ***/
 
 var setupStreamToDB = function(err, db) {
-    assert.equal(null, err);
-    console.log("Connected to server.");
 
-    var tweetsCol = db.collection('tweets');
-    var hashtagsCol = db.collection('hashtags');
-
-    //remove records older than 24hours
-    var cleaningTweets = setInterval(function(tweetsCol)
-    {
-        tweetsCol.remove( {
-            timestamp: { $lt: timestamp() - 3600 * 24 }
-        }); // keep for 24 hours
-    }, 60 * 1000, tweetsCol);
-
-    // every hour reset current hour's counter
-    var cleaningHashtagCounters = setInterval(function(hashtagsCol)
-    {
-        var date = new Date();
-        if (date.getMinutes() === 0 && date.getSeconds() === 0)
-        {
-            var update = {};
-            update['hours.' + date.getHours()] = 0;
-
-            hashtagsCol.update({}, { $set : update }, { multi: true} );
-        }
-    }, 1000, hashtagsCol);
-
-    client.stream('statuses/sample', function(stream)
-    {
-        stream.on('data', function(tweet) {
-            var keywords = [];
-            if (tweet.text !== undefined)
-            {
-                keywords = getLowerCaseKeywordsArray(tweet.text);
-                keywords = keepValidKeywords(keywords, forbiddenWords);
-
-                if (keywords.length > 0)
-                {
-                    insertTweet(tweetsCol, keywords, tweet);
-                    trackHashtags(hashtagsCol, keywords);
-                }
-            }
-        });
-
-        stream.on('error', function(error) {
-                throw error;
-        });
-    });
 
     setupWeb(tweetsCol); //start web server
 };
-
-MongoClient.connect(config.mongodb.url, setupStreamToDB);
 
 /*** search happens here ***/
 
 var searchKeywords = function(tweetsCol, query, next)
 {
-    var queryKeywords = getLowerCaseKeywordsArray(query);
+    var queryKeywords = helpers.getLowerCaseKeywordsArray(query);
     var dictionary = {};
 
     tweetsCol.find({
@@ -207,9 +116,17 @@ var getTweetsCount = function (tweetsCol, next)
         });
 };
 
+
+
 /*** web server and requests handling ***/
-var setupWeb = function (tweetsCol)
+
+var setupWeb = function (err, db)
 {
+    assert.equal(null, err);
+
+    var tweetsCol = db.collection('tweets');
+    var hashtagsCol = db.collection('hashtags');
+
     var web = express();
 
     // index
@@ -222,7 +139,7 @@ var setupWeb = function (tweetsCol)
 
     //search
     web.get('/search', function (req, res) {
-        var query = req.query.q.removePunctuation();
+        var query = helpers.removePunctuation(req.query.q);
 
         searchKeywords(tweetsCol, query, function(result)
         {
@@ -234,3 +151,5 @@ var setupWeb = function (tweetsCol)
         console.log('Listening on port 8080!');
     });
 };
+
+MongoClient.connect(config.mongodb.url, setupWeb);
