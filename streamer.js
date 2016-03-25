@@ -19,33 +19,34 @@ var insertTweet = function(tweetsCol, keywords, tweet)
         "keywords_lower" : keywords,
         //"text" : tweet.text,
         "timestamp" : Math.round(tweet.timestamp_ms / 1000)
-    },
-    function(err, result)
-    {
-        assert.equal(err, null);
     });
 };
 
 var trackHashtags = function(hashtagsCol, keywords)
 {
-    var currentHour = new Date().getHours();
-    var hashtag = '';
+    var date = new Date();
+    var currentHour = date.getHours();
+
+    var updateObj = {};
+    updateObj['hours.' + currentHour] = 1;
+
+    var hashtag = null;
+    var hashtagsList = [];
 
     for (var i = 0; i < keywords.length; i++)
     {
         hashtag = keywords[i];
 
         if (hashtag.charAt(0) === '#')
-        {
-            var updateObj = {};
-            updateObj['hours.' + currentHour] = 1;
+            hashtagsList.push(hashtag);
+    }
 
-            hashtagsCol.updateOne(
-                { hashtag: hashtag },
-                { $inc: updateObj, $set: { updated_at: new Date() } },
-                { upsert: true },
-                function(err, result) { assert.equal(err, null); });
-        }
+    if (hashtagsList.length > 0)
+    {
+        hashtagsCol.update(
+            { hashtag: { $in: hashtagsList } },
+            { $inc: updateObj, $set: { updated_at: date } },
+            { upsert: true });
     }
 };
 
@@ -92,9 +93,10 @@ var setupStreamToDB = function(err, db) {
     client.stream('statuses/sample', function(stream)
     {
         stream.on('data', function(tweet) {
-            var keywords = [];
             if (tweet.text !== undefined)
             {
+                var keywords = [];
+
                 keywords = helpers.getLowerCaseKeywordsArray(tweet.text);
                 keywords = helpers.keepValidKeywords(keywords, forbiddenWords);
 
@@ -103,11 +105,12 @@ var setupStreamToDB = function(err, db) {
                     insertTweet(tweetsCol, keywords, tweet);
                     trackHashtags(hashtagsCol, keywords);
                 }
+                keywords = null;
             }
         });
 
         stream.on('error', function(error) {
-                throw error;
+            throw error;
         });
     });
 };

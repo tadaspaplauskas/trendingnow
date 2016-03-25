@@ -1,0 +1,21 @@
+{
+  "apps" : [{
+    "name"        : "web",
+    "script"      : "app.js",
+    "node_args"   : ["--max_old_space_size=100"],
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "production"
+    }
+  },
+  {
+    "name"        : "streamer",
+    "script"      : "streamer.js",
+    "node_args"   : ["--max_old_space_size=100"],
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "production"
+    }
+  }
+  ]
+}
