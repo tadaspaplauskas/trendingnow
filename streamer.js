@@ -3,8 +3,8 @@
 var config = require('./config');
 var helpers = require('./helpers');
 
-var Twitter = require('twitter');
-var client = new Twitter(config.twitter);
+var Twit = require('twit');
+var twitter = new Twit(config.twitter);
 
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
@@ -54,7 +54,7 @@ var trackHashtags = function(hashtagsCol, keywords)
 
 var setupStreamToDB = function(err, db) {
     assert.equal(null, err);
-    console.log("Streaming to DB");
+    console.log("Mongodb connected");
 
     var tweetsCol = db.collection('tweets');
     var hashtagsCol = db.collection('hashtags');
@@ -90,28 +90,39 @@ var setupStreamToDB = function(err, db) {
 
     /*** HOUSE KEEEPING ***/
 
-    client.stream('statuses/sample', function(stream)
-    {
-        stream.on('data', function(tweet) {
-            if (tweet.text !== undefined)
+    var stream = twitter.stream('statuses/sample');
+
+    stream.on('tweet', function(tweet) {
+        if (tweet.text !== undefined)
+        {
+            var keywords = [];
+
+            keywords = helpers.getLowerCaseKeywordsArray(tweet.text);
+            keywords = helpers.keepValidKeywords(keywords, forbiddenWords);
+
+            if (keywords.length > 0)
             {
-                var keywords = [];
-
-                keywords = helpers.getLowerCaseKeywordsArray(tweet.text);
-                keywords = helpers.keepValidKeywords(keywords, forbiddenWords);
-
-                if (keywords.length > 0)
-                {
-                    insertTweet(tweetsCol, keywords, tweet);
-                    trackHashtags(hashtagsCol, keywords);
-                }
-                keywords = null;
+                insertTweet(tweetsCol, keywords, tweet);
+                trackHashtags(hashtagsCol, keywords);
             }
-        });
+            keywords = null;
+        }
+    });
 
-        stream.on('error', function(error) {
-            throw error;
-        });
+    stream.on('connect', function(request) {
+        console.log('Trying to connect to twitter');
+    });
+
+    stream.on('connected', function(response) {
+        console.log('Connected to twitter!');
+    });
+
+    stream.on('reconnect', function(request, response, connectInterval) {
+        console.log('Reconnecting to twitter in ' + connectInterval + ' ms');
+    });
+
+    stream.on('error', function(error) {
+        console.log(error);
     });
 };
 

@@ -4,8 +4,6 @@ var config = require('./config');
 var helpers = require('./helpers');
 
 var express = require('express');
-var Twitter = require('twitter');
-var client = new Twitter(config.twitter);
 
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
