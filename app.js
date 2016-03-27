@@ -11,51 +11,6 @@ var ObjectId = require('mongodb').ObjectID;
 
 var forbiddenWords = config.forbiddenWords;
 
-var insertTweet = function(tweetsCol, keywords, tweet)
-{
-    tweetsCol.insertOne( {
-        //"keywords" : keywords,
-        "keywords_lower" : keywords,
-        //"text" : tweet.text,
-        "timestamp" : Math.round(tweet.timestamp_ms / 1000)
-    },
-    function(err, result)
-    {
-        assert.equal(err, null);
-    });
-};
-
-var trackHashtags = function(hashtagsCol, keywords)
-{
-    var currentHour = new Date().getHours();
-    var hashtag = '';
-
-    for (var i = 0; i < keywords.length; i++)
-    {
-        hashtag = keywords[i];
-
-        if (hashtag.charAt(0) === '#')
-        {
-            var updateObj = {};
-            updateObj['hours.' + currentHour] = 1;
-
-            hashtagsCol.updateOne(
-                { hashtag: hashtag },
-                { $inc: updateObj, $set: { updated_at: new Date() } },
-                { upsert: true },
-                function(err, result) { assert.equal(err, null); });
-        }
-    }
-};
-
-/*** connect twittter stream to mongodb ***/
-
-var setupStreamToDB = function(err, db) {
-
-
-    setupWeb(tweetsCol); //start web server
-};
-
 /*** search happens here ***/
 
 var searchKeywords = function(tweetsCol, query, next)
@@ -114,7 +69,92 @@ var getTweetsCount = function (tweetsCol, next)
         });
 };
 
+var analyzeHashtagDoc = function (doc)
+{
+    var values = [];
+    var currentHour = helpers.getCurrentHour();
 
+    if (doc === null)
+        return 0;
+
+    for (var i = 0; i < 24; i++)
+    {
+        if (doc.hours[i] !== undefined)
+        {
+            values.push(doc.hours[i]);
+        }
+    }
+
+    var zScore = 0;
+
+    if (doc.hours[currentHour] !== undefined)
+    {
+        zScore = helpers.zScore(doc.hours[currentHour], values);
+    }
+    return zScore;
+};
+
+var searchHashtag = function (hashtagsCol, hashtag, next)
+{
+    var hashtags = helpers.getLowerCaseKeywordsArray(hashtag);
+    hashtag = hashtags[0];
+
+    hashtagsCol.findOne( { hashtag: hashtag }, function (err, doc)
+    {
+        var zScore = analyzeHashtagDoc(doc);
+
+        // is trending?
+        var output = '';
+
+        if (zScore > config.zScorePos)
+            output = 'Hashtag is trending, get on it!';
+        else if (zScore < config.zScoreNeg)
+            output = 'Hashtag is trending down';
+        else
+            output = 'Hashtag is not trending';
+
+        next(zScore + ': ' + output);
+
+        //1.96 significance level should be at least that
+    });
+};
+
+var scanHashtagsForTrends = function (hashtagsCol, trendingCol)
+{
+    hashtagsCol.find({}).each(function (err, doc)
+    {
+        if (doc === null)
+            return 0;
+
+        var zScore = analyzeHashtagDoc(doc);
+
+        if (zScore > config.zScorePos)
+        {
+            trendingCol.updateOne(
+                { hashtag: doc.hashtag },
+                { $set: { zscore: zScore, updated_at: new Date() } },
+                { upsert: true });
+        }
+    });
+};
+
+var getTrendingHashtags = function (trendingCol, next)
+{
+    var trends = [];
+    trendingCol.find().sort( { zscore: -1 }).each(function(err, doc)
+    {
+        if (doc === null)
+            next(trends);
+
+        trends.push(doc);
+    });
+};
+/*** connect to mongodb ***/
+
+var setupStreamToDB = function(err, db)
+{
+    setupWeb(tweetsCol); //start web server
+};
 
 /*** web server and requests handling ***/
 
@@ -124,6 +164,18 @@ var setupWeb = function (err, db)
 
     var tweetsCol = db.collection('tweets');
     var hashtagsCol = db.collection('hashtags');
+    var trendingCol = db.collection('trending');
+
+    /*** CONSTANTLY SCAN FOR TRENDING TOPICS ***/
+
+    setInterval(scanHashtagsForTrends, 60 * 1000, hashtagsCol, trendingCol);
+
+    setInterval(function (trendingCol)
+    {
+        trendingCol.remove( { updated_at: { $lt: new Date(new Date() - 120 * 1000) } } );
+    }, 60 * 1000, trendingCol);
+
+    /*** ***/
 
     var web = express();
 
@@ -131,17 +183,45 @@ var setupWeb = function (err, db)
     web.get('/', function (req, res) {
         getTweetsCount(tweetsCol, function(count)
         {
-            res.send('Hello. ' + count + ' tweets in the database. Use /search?q= to search.');
+            var output = 'Hello. ' + count + ' tweets in the database. Use /search?q= to search.';
+
+            res.send(output);
         });
     });
 
-    //search
-    web.get('/search', function (req, res) {
+    //return trending hashtags
+    web.get('/trending', function (req, res)
+    {
+        getTrendingHashtags(trendingCol, function(result)
+            {
+                var output = '';
+
+                for (var i = 0; i < result.length; i++)
+                {
+                    output += '<li>' + result[i].zscore + ': ' + result[i].hashtag + '</li>';
+                }
+
+                res.send('<ol>' + output + '</ol>');
+            });
+    });
+
+    //search keyword
+    web.get('/keywords', function (req, res) {
         var query = helpers.removePunctuation(req.query.q);
 
         searchKeywords(tweetsCol, query, function(result)
         {
             res.send(JSON.stringify(result));
+        });
+    });
+
+    //search keyword
+    web.get('/hashtag', function (req, res) {
+        var query = helpers.removePunctuation(req.query.q);
+
+        searchHashtag(hashtagsCol, query, function(result)
+        {
+            res.send(result);
         });
     });
 

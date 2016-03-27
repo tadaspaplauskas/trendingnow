@@ -1,5 +1,8 @@
 var config = {};
 
+config.zScorePos = 1.95;
+config.zScoreNeg = -1.95;
+
 config.twitter = {
     consumer_key: 'tqMsxyNJ57fsBU5kfhNGCmOvD',
     consumer_secret: 'H1YkMj0dDtLh95bD2pwk02sJLupqbN3YzkyF5jO21KuZl03UXu',

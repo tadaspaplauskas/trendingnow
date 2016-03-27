@@ -38,4 +38,46 @@ helpers.keepValidKeywords = function (keywords, forbidden) //removes links and m
     });
 };
 
+helpers.average = function (data)
+{
+  var sum = data.reduce(function(sum, value){
+    return sum + value;
+  }, 0);
+
+  var avg = sum / data.length;
+
+  return avg;
+};
+
+helpers.standardDeviation = function (values)
+{
+  var avg = helpers.average(values);
+
+  var squareDiffs = values.map(function(value){
+    var diff = value - avg;
+    var sqrDiff = diff * diff;
+    return sqrDiff;
+  });
+
+  var avgSquareDiff = helpers.average(squareDiffs);
+
+  var stdDev = Math.sqrt(avgSquareDiff);
+
+  return stdDev;
+};
+
+helpers.zScore = function (current, values)
+{
+    var std = helpers.standardDeviation(values);
+    var avg = helpers.average(values);
+
+    return (current - avg) / std;
+};
+
+helpers.getCurrentHour = function ()
+{
+    return new Date().getHours();
+};
+
+
 module.exports = helpers;

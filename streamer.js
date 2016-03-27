@@ -22,31 +22,24 @@ var insertTweet = function(tweetsCol, keywords, tweet)
     });
 };
 
-var trackHashtags = function(hashtagsCol, keywords)
+var searchHashtags = function(hashtagsCol, keywords)
 {
-    var date = new Date();
-    var currentHour = date.getHours();
-
     var updateObj = {};
-    updateObj['hours.' + currentHour] = 1;
+    updateObj['hours.' + helpers.getCurrentHour()] = 1;
 
     var hashtag = null;
-    var hashtagsList = [];
 
     for (var i = 0; i < keywords.length; i++)
     {
         hashtag = keywords[i];
 
         if (hashtag.charAt(0) === '#')
-            hashtagsList.push(hashtag);
-    }
-
-    if (hashtagsList.length > 0)
-    {
-        hashtagsCol.update(
-            { hashtag: { $in: hashtagsList } },
-            { $inc: updateObj, $set: { updated_at: date } },
+        {
+            hashtagsCol.updateOne(
+            { hashtag: hashtag },
+            { $inc: updateObj, $set: { updated_at: new Date() } },
             { upsert: true });
+        }
     }
 };
 
@@ -103,26 +96,23 @@ var setupStreamToDB = function(err, db) {
             if (keywords.length > 0)
             {
                 insertTweet(tweetsCol, keywords, tweet);
-                trackHashtags(hashtagsCol, keywords);
+                searchHashtags(hashtagsCol, keywords);
             }
             keywords = null;
         }
     });
 
     stream.on('connect', function(request) {
-        console.log('Trying to connect to twitter');
+        console.log(new Date() + ' Trying to connect to twitter');
     });
 
     stream.on('connected', function(response) {
-        console.log('Connected to twitter!');
-    });
-
-    stream.on('reconnect', function(request, response, connectInterval) {
-        console.log('Reconnecting to twitter in ' + connectInterval + ' ms');
+        console.log(new Date() + ' Connected to twitter!');
     });
 
     stream.on('error', function(error) {
         console.log(error);
+        process.exit(1);
     });
 };
 
