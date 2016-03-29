@@ -1,0 +1,78 @@
+doctype
+html
+    head
+        title Twitter feed
+        link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css')
+
+        link(rel='stylesheet', href='http://fonts.googleapis.com/css?family=Lato:300&subset=latin,latin-ext')
+        //link(rel='stylesheet', href='views/style.css')
+
+        style.
+            body {
+                font-family: "Lato", Verdana, Helvetica, sans-serif;
+                text-align: center;
+                width: 90%;
+                margin: auto;
+                font-size: 200%;
+            }
+
+            .logo {
+                font-style: italic;
+                font-weight: bold;
+                font-size: 5em;
+            }
+
+            .page-header {
+                margin-top: 0;
+            }
+
+        script(type="text/javascript").
+            window.onload = function ()
+            {
+                var sf = document.getElementById("search-form");
+                var si = document.getElementById("search-input");
+
+                sf.onsubmit = function ()
+                {
+                    window.location = "/search/" + escape(si.value);
+                    return false;
+                }
+            }
+    body
+        .logo #
+
+        .page-header
+            h1 thesignal.online / groupmind.online
+            p get the signals before it becomes news
+
+        .row
+            .col-md-4
+                h2 Trending right now
+
+                if trendingList && trendingList.length > 0
+                    ul.list-unstyled
+                        each hashtag in trendingList
+                            li
+                                a(href='hashtag/' + escape(hashtag.hashtag))= hashtag.hashtag
+                else
+                    p Nothing noteworthy is happening on Twitter right now
+
+            .col-md-4
+                h2 Most popular today
+
+                if popularList && popularList.length > 0
+                    ul.list-unstyled
+                        each hashtag in popularList
+                            li
+                                a(href='hashtag/' + escape(hashtag.hashtag))= hashtag.hashtag
+                else
+                    p Nothing noteworthy is happening on Twitter right now
+
+            .col-md-4
+                h2 Search for tag or keyword
+                p You can subscribe to get notified by email when a particular tag starts gaining momentum.
+
+                form#search-form.input-group
+                    input#search-input.form-control(type="text" placeholder="#" value="#")
+                    .input-group-btn
+                        button.btn.btn-default(type="submit") Go!

@@ -1,11 +1,11 @@
 {
   "apps" : [{
-    "name"        : "web",
+    "name"        : "app",
     "script"      : "app.js",
     "node_args"   : ["--max_old_space_size=100"],
     "watch"       : true,
     "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "development"
     }
   },
   {
@@ -14,7 +14,7 @@
     "node_args"   : ["--max_old_space_size=100"],
     "watch"       : true,
     "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "development"
     }
   }
   ]
