@@ -26,6 +26,7 @@ var searchHashtags = function(hashtagsCol, keywords)
 {
     var updateObj = {};
     updateObj['hours.' + helpers.getCurrentHour()] = 1;
+    updateObj.mentions = 1;
 
     var hashtag = null;
 
@@ -33,7 +34,7 @@ var searchHashtags = function(hashtagsCol, keywords)
     {
         hashtag = keywords[i];
 
-        if (hashtag.charAt(0) === '#')
+        if (hashtag.charAt(0) === '#' && hashtag.length > 2)
         {
             hashtagsCol.updateOne(
             { hashtag: hashtag },
@@ -66,6 +67,13 @@ var setupStreamToDB = function(err, db) {
     var cleaningHashtagCounters = setInterval(function(hashtagsCol)
     {
         var date = new Date();
+
+        // nullify mentions counter when day starts
+        if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0)
+        {
+            hashtagsCol.update({}, { $set : { mentions: 0 } }, { multi: true} );
+        }
+
         if (date.getMinutes() === 0 && date.getSeconds() === 0)
         {
             var update = {};
@@ -78,15 +86,14 @@ var setupStreamToDB = function(err, db) {
     var cleaningHashtags = setInterval(function(hashtagsCol)
     {
         hashtagsCol.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } } );
-    }
-    , 60 * 1000, hashtagsCol);
+    }, 60 * 1000, hashtagsCol);
 
     /*** HOUSE KEEEPING ***/
 
     var stream = twitter.stream('statuses/sample');
 
     stream.on('tweet', function(tweet) {
-        if (tweet.text !== undefined)
+        if (tweet.text !== undefined && tweet.lang === 'en') // only english at least for now
         {
             var keywords = [];
 

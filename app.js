@@ -86,12 +86,13 @@ var analyzeHashtagDoc = function (doc)
     }
 
     var zScore = 0;
+    var mentions = helpers.sum(values);
 
-    if (doc.hours[currentHour] !== undefined)
+    if (doc.hours[currentHour] !== undefined && mentions > config.commonSenseEdge)
     {
         zScore = helpers.zScore(doc.hours[currentHour], values);
     }
-    return zScore;
+    return { zScore: zScore, mentions: mentions };
 };
 
 var searchHashtag = function (hashtagsCol, hashtag, next)
@@ -101,21 +102,19 @@ var searchHashtag = function (hashtagsCol, hashtag, next)
 
     hashtagsCol.findOne( { hashtag: hashtag }, function (err, doc)
     {
-        var zScore = analyzeHashtagDoc(doc);
+        var analysis = analyzeHashtagDoc(doc);
 
         // is trending?
         var output = '';
 
-        if (zScore > config.zScorePos)
+        if (analysis.zScore > config.zScorePos)
             output = 'Hashtag is trending, get on it!';
-        else if (zScore < config.zScoreNeg)
+        else if (analysis.zScore < config.zScoreNeg)
             output = 'Hashtag is trending down';
         else
             output = 'Hashtag is not trending';
 
-        next(zScore + ': ' + output);
-
-        //1.96 significance level should be at least that
+        next(JSON.stringify(analysis) + ': ' + output);
     });
 };
 
@@ -126,27 +125,45 @@ var scanHashtagsForTrends = function (hashtagsCol, trendingCol)
         if (doc === null)
             return 0;
 
-        var zScore = analyzeHashtagDoc(doc);
+        var analysis = analyzeHashtagDoc(doc);
 
-        if (zScore > config.zScorePos)
+        if (analysis.zScore > config.zScorePos)
         {
             trendingCol.updateOne(
                 { hashtag: doc.hashtag },
-                { $set: { zscore: zScore, updated_at: new Date() } },
+                { $set: { zscore: analysis.zScore, mentions: analysis.mentions, updated_at: new Date() } },
                 { upsert: true });
         }
     });
 };
 
-var getTrendingHashtags = function (trendingCol, next)
+var getHashtagLists = function (trendingCol, hashtagsCol, next)
 {
     var trends = [];
-    trendingCol.find().sort( { zscore: -1 }).each(function(err, doc)
-    {
-        if (doc === null)
-            next(trends);
+    var popular = [];
 
-        trends.push(doc);
+    trendingCol.find().sort( { zscore: -1, mentions: -1 }).limit(10)
+    .each(function(err, trend)
+    {
+        if (trend === null)
+        {
+            hashtagsCol.find().sort( { mentions: -1 }).limit(10)
+            .each(function(err, pop)
+            {
+                if (pop === null)
+                {
+                    next(trends, popular);
+                }
+                else
+                {
+                    popular.push(pop);
+                }
+            });
+        }
+        else
+        {
+            trends.push(trend);
+        }
     });
 };
 /*** connect to mongodb ***/
@@ -172,41 +189,34 @@ var setupWeb = function (err, db)
 
     setInterval(function (trendingCol)
     {
-        trendingCol.remove( { updated_at: { $lt: new Date(new Date() - 120 * 1000) } } );
+        trendingCol.remove( { updated_at: { $lt: new Date(new Date() - 3600 * 1000) } } );
     }, 60 * 1000, trendingCol);
 
     /*** ***/
 
-    var web = express();
+    var app = express();
+    app.set('view engine', 'pug');
 
     // index
-    web.get('/', function (req, res) {
+    app.get('/count', function (req, res) {
         getTweetsCount(tweetsCol, function(count)
         {
-            var output = 'Hello. ' + count + ' tweets in the database. Use /search?q= to search.';
-
-            res.send(output);
+            res.send(count + ' tweets in the database.');
         });
     });
 
     //return trending hashtags
-    web.get('/trending', function (req, res)
+    app.get('/', function (req, res)
     {
-        getTrendingHashtags(trendingCol, function(result)
+
+        getHashtagLists(trendingCol, hashtagsCol, function(trending, popular)
             {
-                var output = '';
-
-                for (var i = 0; i < result.length; i++)
-                {
-                    output += '<li>' + result[i].zscore + ': ' + result[i].hashtag + '</li>';
-                }
-
-                res.send('<ol>' + output + '</ol>');
+                res.render('index', { trendingList: trending, popularList: popular });
             });
     });
 
     //search keyword
-    web.get('/keywords', function (req, res) {
+    app.get('/keywords', function (req, res) {
         var query = helpers.removePunctuation(req.query.q);
 
         searchKeywords(tweetsCol, query, function(result)
@@ -216,8 +226,8 @@ var setupWeb = function (err, db)
     });
 
     //search keyword
-    web.get('/hashtag', function (req, res) {
-        var query = helpers.removePunctuation(req.query.q);
+    app.get('/hashtag/:hashtag', function (req, res) {
+        var query = helpers.removePunctuation(req.params.hashtag);
 
         searchHashtag(hashtagsCol, query, function(result)
         {
@@ -225,7 +235,7 @@ var setupWeb = function (err, db)
         });
     });
 
-    web.listen(8080, function () {
+    app.listen(8080, function () {
         console.log('Listening on port 8080!');
     });
 };

@@ -1,7 +1,8 @@
 var config = {};
 
-config.zScorePos = 1.95;
-config.zScoreNeg = -1.95;
+config.commonSenseEdge = 150; // do not let pass hashtags with less that that amount of mentions
+config.zScorePos = 1.95; //2.58; // 1.95;
+config.zScoreNeg = -1.95; //2.58; //-1.95
 
 config.twitter = {
     consumer_key: 'tqMsxyNJ57fsBU5kfhNGCmOvD',

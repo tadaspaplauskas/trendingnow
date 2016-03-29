@@ -2,7 +2,7 @@ var helpers = {};
 
 helpers.removePunctuation = function (str)
 {
-    return str.replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
+    return str.replace(/\n/g,  ' ').replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
 };
 
 // prepare keywords array (used for search)
@@ -77,6 +77,11 @@ helpers.zScore = function (current, values)
 helpers.getCurrentHour = function ()
 {
     return new Date().getHours();
+};
+
+helpers.sum = function (array)
+{
+    return array.reduce(function(a, b) { return a + b; }, 0);
 };
 
 
