@@ -34,7 +34,7 @@ var searchHashtags = function(hashtagsCol, keywords)
     {
         hashtag = keywords[i];
 
-        if (hashtag.charAt(0) === '#' && hashtag.length > 2)
+        if (helpers.isHashtag(hashtag))
         {
             hashtagsCol.updateOne(
             { hashtag: hashtag },

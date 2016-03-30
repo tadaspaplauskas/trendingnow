@@ -1,0 +1,26 @@
+extends ./master.pug
+
+block content
+
+    .row
+        .col-md-4
+            h2 Words mentioned together with <strong>#{keyword}</strong>
+            p
+                if (related.length > 0)
+                    each word in related
+                        a(href="/keywords/" + escape(word[0]))= word[0]
+                        = ' '
+                else
+                    |I'm afraid that's not a very popular topic, sorry.
+
+        .col-md-4
+            h2 24h trend graph for <strong>#{keyword}</strong>
+
+            p
+                if (hashtagData === null || hashtagData === undefined)
+                    | Sorry, graphs are only available for hashtags
+                else
+                    = JSON.stringify(hashtagData)
+
+        .col-md-4
+            include ./search_form.pug

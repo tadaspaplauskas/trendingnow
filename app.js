@@ -13,7 +13,7 @@ var forbiddenWords = config.forbiddenWords;
 
 /*** search happens here ***/
 
-var searchKeywords = function(tweetsCol, query, next)
+var searchRelatedKeywords = function(tweetsCol, query, next)
 {
     var queryKeywords = helpers.getLowerCaseKeywordsArray(query);
     var dictionary = {};
@@ -22,7 +22,7 @@ var searchKeywords = function(tweetsCol, query, next)
         keywords_lower: {
             $all:  queryKeywords
         }
-    }).each(
+    }).limit(30).each(
         function(err, item) // do something with results, count stuff or smth
         {
             assert.equal(err, null);
@@ -197,6 +197,8 @@ var setupWeb = function (err, db)
     var app = express();
     app.set('view engine', 'pug');
 
+    app.use(express.static('public'));
+
     // index
     app.get('/count', function (req, res) {
         getTweetsCount(tweetsCol, function(count)
@@ -208,35 +210,44 @@ var setupWeb = function (err, db)
     //return trending hashtags
     app.get('/', function (req, res)
     {
-
         getHashtagLists(trendingCol, hashtagsCol, function(trending, popular)
-            {
-                res.render('index', { trendingList: trending, popularList: popular });
-            });
-    });
-
-    //search keyword
-    app.get('/keywords', function (req, res) {
-        var query = helpers.removePunctuation(req.query.q);
-
-        searchKeywords(tweetsCol, query, function(result)
         {
-            res.send(JSON.stringify(result));
+            res.render('index', { trendingList: trending, popularList: popular });
         });
     });
 
     //search keyword
-    app.get('/hashtag/:hashtag', function (req, res) {
-        var query = helpers.removePunctuation(req.params.hashtag);
+    app.get('/keywords/:keyword', function (req, res) {
+        var query = helpers.removePunctuation(req.params.keyword);
 
-        searchHashtag(hashtagsCol, query, function(result)
+        searchRelatedKeywords(tweetsCol, query, function(related)
         {
-            res.send(result);
+            if (helpers.isHashtag(req.params.keyword))
+            {
+                searchHashtag(hashtagsCol, query, function(hashtagData)
+                {
+                    res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: hashtagData } );
+                });
+            }
+            else
+            {
+                res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: null } );
+            }
         });
     });
 
     app.listen(8080, function () {
         console.log('Listening on port 8080!');
+    });
+
+    //return trending hashtags
+    app.get('/about', function (req, res)
+    {
+        res.render('about', { title: "about" });
+    });
+
+    app.use(function(req, res) {
+        res.status(404).render('404');
     });
 };
 

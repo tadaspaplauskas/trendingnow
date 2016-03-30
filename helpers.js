@@ -30,6 +30,11 @@ helpers.timestamp = function()
     return Math.round(Date.now() / 1000);
 };
 
+helpers.isHashtag = function (hashtag)
+{
+  return (hashtag.charAt(0) === '#' && hashtag.length > 2);
+};
+
 helpers.keepValidKeywords = function (keywords, forbidden) //removes links and most common words
 {
     return keywords.filter(function(keyword)
