@@ -2,7 +2,7 @@ var helpers = {};
 
 helpers.removePunctuation = function (str)
 {
-    return str.replace(/\n/g,  ' ').replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
+    return str.replace(/\n/g,  ' ').replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, ''); //.replace(/[^\w# ]/g, '');
 };
 
 // prepare keywords array (used for search)
@@ -88,6 +88,5 @@ helpers.sum = function (array)
 {
     return array.reduce(function(a, b) { return a + b; }, 0);
 };
-
 
 module.exports = helpers;

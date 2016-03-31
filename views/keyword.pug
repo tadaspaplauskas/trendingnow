@@ -1,26 +1,78 @@
 extends ./master.pug
 
+block scripts
+    script(src="https://www.gstatic.com/charts/loader.js")
+    if (hashtagGraph !== null && hashtagGraph !== undefined)
+        script.
+            google.charts.load('current', {'packages':['corechart', 'line']});
+            google.charts.setOnLoadCallback(drawChart);
+
+            function drawChart() {
+                var data = new google.visualization.DataTable();
+
+                data.addColumn('string', 'Hour');
+                data.addColumn('number', 'Mentions (estimated)');
+                //data.addColumn({type: 'number', role: 'annotation'});
+
+                var hashtagData = !{hashtagGraph};
+                var date = new Date();
+                var rows = hashtagData.map(function (item, index)
+                {
+                    return [new Date(date-(23-index)*3600*1000).getHours().toString().concat(":00"), item];
+                });
+
+                data.addRows(rows);
+
+                var options = {
+                    curveType: 'function',
+                    hAxis: {
+                        title: 'Hour',
+                        textStyle: {fontSize:11},
+                        gridlines: {
+                            count: 25,
+                        }
+                    },
+                    vAxis: {
+                        title: 'Mentions (estimated)',
+                        viewWindowMode: 'explicit',
+                        viewWindow: {
+                            min: 0
+                        }
+                    },
+                    legend: 'none'
+                };
+
+                var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+                chart.draw(data, options);
+            }
+
 block content
 
     .row
-        .col-md-4
+        .col-md-6
             h2 Words mentioned together with <strong>#{keyword}</strong>
             p
                 if (related.length > 0)
                     each word in related
-                        a(href="/keywords/" + escape(word[0]))= word[0]
+                        a(href="/keywords/" + word[0].replace('#', '%23'))= word[0]
                         = ' '
                 else
                     |I'm afraid that's not a very popular topic, sorry.
+        .col-md-6
 
-        .col-md-4
-            h2 24h trend graph for <strong>#{keyword}</strong>
 
+
+
+
+    .row
+        .col-md-12
+            h2 Trend graph for <strong>#{keyword}</strong> over the last 24 hours
             p
-                if (hashtagData === null || hashtagData === undefined)
+                if (hashtagGraph === null || hashtagGraph === undefined)
                     | Sorry, graphs are only available for hashtags
                 else
-                    = JSON.stringify(hashtagData)
+                    #curve_chart(style="width: 100%; height: 100%")
 
-        .col-md-4
-            include ./search_form.pug
+
+        //.col-md-4
+        //    include ./search_form.pug

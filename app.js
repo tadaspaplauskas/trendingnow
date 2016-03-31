@@ -90,7 +90,9 @@ var analyzeHashtagDoc = function (doc)
 
     if (doc.hours[currentHour] !== undefined && mentions > config.commonSenseEdge)
     {
-        zScore = helpers.zScore(doc.hours[currentHour], values);
+        var currentHours = doc.hours[currentHour] + (currentHour > 0 ? doc.hours[currentHour-1] : doc.hours[23]);
+
+        zScore = helpers.zScore(currentHours, values);
     }
     return { zScore: zScore, mentions: mentions };
 };
@@ -102,19 +104,7 @@ var searchHashtag = function (hashtagsCol, hashtag, next)
 
     hashtagsCol.findOne( { hashtag: hashtag }, function (err, doc)
     {
-        var analysis = analyzeHashtagDoc(doc);
-
-        // is trending?
-        var output = '';
-
-        if (analysis.zScore > config.zScorePos)
-            output = 'Hashtag is trending, get on it!';
-        else if (analysis.zScore < config.zScoreNeg)
-            output = 'Hashtag is trending down';
-        else
-            output = 'Hashtag is not trending';
-
-        next(JSON.stringify(analysis) + ': ' + output);
+        next(doc);
     });
 };
 
@@ -226,7 +216,34 @@ var setupWeb = function (err, db)
             {
                 searchHashtag(hashtagsCol, query, function(hashtagData)
                 {
-                    res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: hashtagData } );
+                    var hashtagGraph = [];
+                    if (hashtagData.hours === undefined)
+                    {
+                        hashtagGraph = null;
+                    }
+                    else
+                    {
+                        var date = new Date();
+
+                        var i = date.getHours();
+                        do
+                        {
+                            i++;
+                            if (i >= 23)
+                            {
+                                i = 0;
+                            }
+                            if (hashtagData.hours[i] !== undefined)
+                            {
+                                hashtagGraph.push(hashtagData.hours[i] * 100);
+                            }
+                            else
+                            {
+                                hashtagGraph.push(0);
+                            }
+                        } while (hashtagGraph.length <= 23);
+                    }
+                    res.render('keyword', { keyword: req.params.keyword, related: related, hashtagGraph: JSON.stringify(hashtagGraph) } );
                 });
             }
             else

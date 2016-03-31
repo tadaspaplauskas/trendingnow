@@ -20,7 +20,7 @@ block content
                 ul.list-unstyled.fade-in-slower
                     each hashtag in popularList
                         li
-                            a(href='keywords/' + escape(hashtag.hashtag))= hashtag.hashtag
+                            a(href='keywords/' + hashtag.hashtag.replace('#', '%23'))= hashtag.hashtag
             else
                 p Nothing noteworthy is happening on Twitter right now
 
