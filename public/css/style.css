@@ -29,8 +29,8 @@ body {
 
 .footer
 {
-    position: absolute;
-    bottom: 1em;
+    margin-top: 2em;
+    text-align: right;
 }
 
 .fade-in-faster {
@@ -68,4 +68,15 @@ body {
 { /* Opera */
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+#search-form {
+    width: 12em;
+    position: absolute;
+    top: 1.5em;
+    right: 3em;
+}
+
+.graph {
+    margin-top: 1em;
 }

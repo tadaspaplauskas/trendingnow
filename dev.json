@@ -1,0 +1,21 @@
+{
+  "apps" : [{
+    "name"        : "app",
+    "script"      : "app.js",
+    "node_args"   : ["--max_old_space_size=100"],
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "development"
+    }
+  },
+  {
+    "name"        : "services",
+    "script"      : "services.js",
+    "node_args"   : ["--max_old_space_size=100"],
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "development"
+    }
+  }
+  ]
+}

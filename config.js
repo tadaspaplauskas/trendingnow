@@ -4,6 +4,8 @@ config.commonSenseEdge = 150; // do not let pass hashtags with less that that am
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
 
+//config.mailgun = {apiKey: api_key, domain: domain};
+
 config.twitter = {
     consumer_key: 'tqMsxyNJ57fsBU5kfhNGCmOvD',
     consumer_secret: 'H1YkMj0dDtLh95bD2pwk02sJLupqbN3YzkyF5jO21KuZl03UXu',
@@ -16,7 +18,11 @@ config.mongodb = {
     url: 'mongodb://127.0.0.1:27017/twitter_feed'
 };
 
-config.forbiddenWords = ['amp', 'are', 'more', 'via', 'its', 'http', 'https', 'is', 'rt',
+config.forbiddenWords = [
+'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
+'#nowplaying', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',
+'#sexy', '#xxx', '#naked', '#horny', '#whore', '#boobs', '#tits', '#anal', '#deepthroat',
+'amp', 'are', 'more', 'via', 'its', 'http', 'https', 'is', 'rt',
 'the',
 'of',
 'and',

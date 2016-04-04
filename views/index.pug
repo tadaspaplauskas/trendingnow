@@ -2,6 +2,9 @@ extends ./master.pug
 
 block content
     .row
+        .col-md-4
+            include ./subscribe_form.pug
+
         .col-md-4.fade-in-faster
             h2 Trending right now
 
@@ -10,6 +13,7 @@ block content
                     each hashtag in trendingList
                         li.fade-in-slower
                             a(href='keywords/' + escape(hashtag.hashtag))= hashtag.hashtag
+                            | <!-- #{hashtag.zscore} -->
             else
                 p Nothing noteworthy is happening on Twitter right now
 
@@ -20,9 +24,8 @@ block content
                 ul.list-unstyled.fade-in-slower
                     each hashtag in popularList
                         li
-                            a(href='keywords/' + hashtag.hashtag.replace('#', '%23'))= hashtag.hashtag
+                            a(href='keywords/' + encodeURIComponent(hashtag.hashtag))= hashtag.hashtag
+                            | <!-- #{hashtag.mentions} -->
             else
                 p Nothing noteworthy is happening on Twitter right now
 
-        .col-md-4
-            include ./search_form.pug

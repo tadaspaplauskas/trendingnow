@@ -5,16 +5,16 @@
     "node_args"   : ["--max_old_space_size=100"],
     "watch"       : true,
     "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "production"
     }
   },
   {
-    "name"        : "streamer",
-    "script"      : "streamer.js",
+    "name"        : "services",
+    "script"      : "services.js",
     "node_args"   : ["--max_old_space_size=100"],
     "watch"       : true,
     "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "production"
     }
   }
   ]

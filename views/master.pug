@@ -9,14 +9,14 @@ html
         script(src="/js/script.js")
         block scripts
     body
+        include ./search_form.pug
+
         .logo
             a(href="/") #
         .page-header
-            h1 thesignal.online / groupmind.online
-            p get the signals before it becomes news
-
+            h1 something.io
+            p get the signals before it becomes the news
         block content
 
-
-    .text-right 2016 &nbsp;
+    .footer 2016 &nbsp;
         a(href="/about") about this

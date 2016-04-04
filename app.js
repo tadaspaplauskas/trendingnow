@@ -1,19 +1,14 @@
 #!/usr/bin/env nodejs
 
 var config = require('./config');
-var helpers = require('./helpers');
-
+var helpers = require('./components/helpers');
 var express = require('express');
-
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
 
-var forbiddenWords = config.forbiddenWords;
-
 /*** search happens here ***/
-
-var searchRelatedKeywords = function(tweetsCol, query, next)
+var searchKeywords = function(tweetsCol, query, next)
 {
     var queryKeywords = helpers.getLowerCaseKeywordsArray(query);
     var dictionary = {};
@@ -22,79 +17,50 @@ var searchRelatedKeywords = function(tweetsCol, query, next)
         keywords_lower: {
             $all:  queryKeywords
         }
-    }).limit(30).each(
-        function(err, item) // do something with results, count stuff or smth
+    }).limit(30).each(function(err, item) // do something with results, count stuff or smth
+    {
+        assert.equal(err, null);
+
+        // finish up
+        if (item === null)
         {
-            assert.equal(err, null);
+            var sorted = [];
 
-            // finish up
-            if (item === null)
+            for (var prop in dictionary)
             {
-                var sorted = [];
-
-                for (var prop in dictionary)
-                {
-                    sorted.push([prop, dictionary[prop]]);
-                }
-
-                sorted = sorted.sort(function(a, b) { return b[1] - a[1]; }).slice(0, 30);
-
-                next(sorted);
-                return;
+                sorted.push([prop, dictionary[prop]]);
             }
 
-            // else process the document, count keywords
-            var keywords = item.keywords_lower;
+            sorted = sorted.sort(function(a, b) { return b[1] - a[1]; }).slice(0, 30);
 
-            for (var j = 0; j < keywords.length; j++)
+            next(sorted);
+            return;
+        }
+
+        // else process the document, count keywords
+        var keywords = item.keywords_lower;
+
+        for (var j = 0; j < keywords.length; j++)
+        {
+            var keyword = keywords[j];
+
+            if (queryKeywords.indexOf(keyword) === -1)
             {
-                var keyword = keywords[j];
-
-                if (queryKeywords.indexOf(keyword) === -1)
-                {
-                    if (dictionary[keyword] === undefined)
-                        dictionary[keyword] = 1;
-                    else
-                        dictionary[keyword]++;
-                }
+                if (dictionary[keyword] === undefined)
+                    dictionary[keyword] = 1;
+                else
+                    dictionary[keyword]++;
             }
-        });
+        }
+    });
 };
 
 var getTweetsCount = function (tweetsCol, next)
 {
     tweetsCol.count(function (err, count)
-        {
-            next(count);
-        });
-};
-
-var analyzeHashtagDoc = function (doc)
-{
-    var values = [];
-    var currentHour = helpers.getCurrentHour();
-
-    if (doc === null)
-        return 0;
-
-    for (var i = 0; i < 24; i++)
     {
-        if (doc.hours[i] !== undefined)
-        {
-            values.push(doc.hours[i]);
-        }
-    }
-
-    var zScore = 0;
-    var mentions = helpers.sum(values);
-
-    if (doc.hours[currentHour] !== undefined && mentions > config.commonSenseEdge)
-    {
-        var currentHours = doc.hours[currentHour] + (currentHour > 0 ? doc.hours[currentHour-1] : doc.hours[23]);
-
-        zScore = helpers.zScore(currentHours, values);
-    }
-    return { zScore: zScore, mentions: mentions };
+        next(count);
+    });
 };
 
 var searchHashtag = function (hashtagsCol, hashtag, next)
@@ -105,25 +71,6 @@ var searchHashtag = function (hashtagsCol, hashtag, next)
     hashtagsCol.findOne( { hashtag: hashtag }, function (err, doc)
     {
         next(doc);
-    });
-};
-
-var scanHashtagsForTrends = function (hashtagsCol, trendingCol)
-{
-    hashtagsCol.find({}).each(function (err, doc)
-    {
-        if (doc === null)
-            return 0;
-
-        var analysis = analyzeHashtagDoc(doc);
-
-        if (analysis.zScore > config.zScorePos)
-        {
-            trendingCol.updateOne(
-                { hashtag: doc.hashtag },
-                { $set: { zscore: analysis.zScore, mentions: analysis.mentions, updated_at: new Date() } },
-                { upsert: true });
-        }
     });
 };
 
@@ -156,46 +103,27 @@ var getHashtagLists = function (trendingCol, hashtagsCol, next)
         }
     });
 };
-/*** connect to mongodb ***/
-
-var setupStreamToDB = function(err, db)
-{
-    setupWeb(tweetsCol); //start web server
-};
 
 /*** web server and requests handling ***/
-
-var setupWeb = function (err, db)
+MongoClient.connect(config.mongodb.url, function (err, db)
 {
     assert.equal(null, err);
-
     var tweetsCol = db.collection('tweets');
     var hashtagsCol = db.collection('hashtags');
     var trendingCol = db.collection('trending');
 
-    /*** CONSTANTLY SCAN FOR TRENDING TOPICS ***/
-
-    setInterval(scanHashtagsForTrends, 60 * 1000, hashtagsCol, trendingCol);
-
-    setInterval(function (trendingCol)
-    {
-        trendingCol.remove( { updated_at: { $lt: new Date(new Date() - 3600 * 1000) } } );
-    }, 60 * 1000, trendingCol);
-
-    /*** ***/
+    /*** web server setup ***/
 
     var app = express();
     app.set('view engine', 'pug');
 
     app.use(express.static('public'));
 
-    // index
-    app.get('/count', function (req, res) {
-        getTweetsCount(tweetsCol, function(count)
-        {
-            res.send(count + ' tweets in the database.');
-        });
+    app.listen(8080, function () {
+        console.log('Listening on port 8080!');
     });
+
+    /*** routing ***/
 
     //return trending hashtags
     app.get('/', function (req, res)
@@ -206,18 +134,25 @@ var setupWeb = function (err, db)
         });
     });
 
+    app.get('/count', function (req, res) {
+        getTweetsCount(tweetsCol, function(count)
+        {
+            res.send(count + ' tweets in the database.');
+        });
+    });
+
     //search keyword
     app.get('/keywords/:keyword', function (req, res) {
         var query = helpers.removePunctuation(req.params.keyword);
 
-        searchRelatedKeywords(tweetsCol, query, function(related)
+        searchKeywords(tweetsCol, query, function(related)
         {
             if (helpers.isHashtag(req.params.keyword))
             {
                 searchHashtag(hashtagsCol, query, function(hashtagData)
                 {
                     var hashtagGraph = [];
-                    if (hashtagData.hours === undefined)
+                    if (hashtagData === null || hashtagData.hours === undefined)
                     {
                         hashtagGraph = null;
                     }
@@ -253,10 +188,6 @@ var setupWeb = function (err, db)
         });
     });
 
-    app.listen(8080, function () {
-        console.log('Listening on port 8080!');
-    });
-
     //return trending hashtags
     app.get('/about', function (req, res)
     {
@@ -266,6 +197,4 @@ var setupWeb = function (err, db)
     app.use(function(req, res) {
         res.status(404).render('404');
     });
-};
-
-MongoClient.connect(config.mongodb.url, setupWeb);
+});

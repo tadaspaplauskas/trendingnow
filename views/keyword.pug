@@ -49,22 +49,21 @@ block scripts
 block content
 
     .row
-        .col-md-6
+        .col-md-4
+            include ./subscribe_form.pug
+
+        .col-md-8
             h2 Words mentioned together with <strong>#{keyword}</strong>
             p
                 if (related.length > 0)
                     each word in related
-                        a(href="/keywords/" + word[0].replace('#', '%23'))= word[0]
+                        a(href="/keywords/" + encodeURIComponent(word[0]))= word[0]
                         = ' '
                 else
                     |I'm afraid that's not a very popular topic, sorry.
         .col-md-6
 
-
-
-
-
-    .row
+    .row.graph
         .col-md-12
             h2 Trend graph for <strong>#{keyword}</strong> over the last 24 hours
             p
@@ -72,7 +71,3 @@ block content
                     | Sorry, graphs are only available for hashtags
                 else
                     #curve_chart(style="width: 100%; height: 100%")
-
-
-        //.col-md-4
-        //    include ./search_form.pug

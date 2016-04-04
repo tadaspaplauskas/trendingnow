@@ -1,7 +1,7 @@
-h2 Search for tag or keyword
-p You can subscribe to get notified by email when a particular tag starts gaining momentum.
-
 form#search-form.input-group
-    input#search-input.form-control(type="text" placeholder="#" value="#")
+    if (keyword !== undefined)
+        input#search-input.text-center.form-control(type="text" placeholder="#" value=keyword)
+    else
+        input#search-input.text-center.form-control(type="text" placeholder="Hastag or keyword")
     .input-group-btn
-        button.btn.btn-default(type="submit") Go!
+        button.btn.btn-default(type="submit") Search

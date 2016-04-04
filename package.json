@@ -5,6 +5,7 @@
   "main": "app.js",
   "dependencies": {
     "express": "^4.13.4",
+    "mailgun-js": "^0.7.7",
     "mongodb": "^2.1.7",
     "nodemon": "^1.9.1",
     "pug": "^2.0.0-alpha1",

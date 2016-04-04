@@ -1,31 +1,21 @@
-#!/usr/bin/env nodejs
+var streamer = {};
 
-var config = require('./config');
-var helpers = require('./helpers');
+streamer.helpers = require('./helpers');
+streamer.Twit = require('twit');
 
-var Twit = require('twit');
-var twitter = new Twit(config.twitter);
-
-var MongoClient = require('mongodb').MongoClient;
-var assert = require('assert');
-var ObjectId = require('mongodb').ObjectID;
-
-var forbiddenWords = config.forbiddenWords;
-
-var insertTweet = function(tweetsCol, keywords, tweet)
+streamer.insertTweet = function(tweets, keywords, tweet)
 {
-    tweetsCol.insertOne( {
-        //"keywords" : keywords,
+    tweets.insertOne( {
         "keywords_lower" : keywords,
         //"text" : tweet.text,
         "timestamp" : Math.round(tweet.timestamp_ms / 1000)
     });
 };
 
-var searchHashtags = function(hashtagsCol, keywords)
+streamer.insertHashtags = function(hashtags, keywords)
 {
     var updateObj = {};
-    updateObj['hours.' + helpers.getCurrentHour()] = 1;
+    updateObj['hours.' + streamer.helpers.getCurrentHour()] = 1;
     updateObj.mentions = 1;
 
     var hashtag = null;
@@ -34,9 +24,9 @@ var searchHashtags = function(hashtagsCol, keywords)
     {
         hashtag = keywords[i];
 
-        if (helpers.isHashtag(hashtag))
+        if (streamer.helpers.isHashtag(hashtag))
         {
-            hashtagsCol.updateOne(
+            hashtags.updateOne(
             { hashtag: hashtag },
             { $inc: updateObj, $set: { updated_at: new Date() } },
             { upsert: true });
@@ -44,52 +34,46 @@ var searchHashtags = function(hashtagsCol, keywords)
     }
 };
 
-/*** connect twittter stream to mongodb ***/
+streamer.init = function (params)
+{
+    var helpers = streamer.helpers;
+    var tweets = params.tweets;
+    var hashtags = params.hashtags;
 
-var setupStreamToDB = function(err, db) {
-    assert.equal(null, err);
-    console.log("Mongodb connected");
-
-    var tweetsCol = db.collection('tweets');
-    var hashtagsCol = db.collection('hashtags');
-
-    /*** HOUSE KEEEPING ***/
+    twitter = new streamer.Twit(params.config.twitter);
 
     //remove records older than 24hours
-    var cleaningTweets = setInterval(function(tweetsCol)
+    setInterval(function()
     {
-        tweetsCol.remove( {
+        tweets.remove( {
             timestamp: { $lt: helpers.timestamp() - 3600 * 24 }
         }); // keep for 24 hours
-    }, 60 * 1000, tweetsCol);
+    }, 60 * 1000);
 
     // every hour reset current hour's counter
-    var cleaningHashtagCounters = setInterval(function(hashtagsCol)
+    setInterval(function()
     {
         var date = new Date();
-
         // nullify mentions counter when day starts
         if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0)
         {
-            hashtagsCol.update({}, { $set : { mentions: 0 } }, { multi: true} );
+            hashtags.update({}, { $set : { mentions: 0 } }, { multi: true} );
         }
-
         if (date.getMinutes() === 0 && date.getSeconds() === 0)
         {
             var update = {};
             update['hours.' + date.getHours()] = 0;
 
-            hashtagsCol.update({}, { $set : update }, { multi: true} );
+            hashtags.update({}, { $set : update }, { multi: true} );
         }
-    }, 1000, hashtagsCol);
+    }, 1000);
 
-    var cleaningHashtags = setInterval(function(hashtagsCol)
+    setInterval(function()
     {
-        hashtagsCol.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } } );
-    }, 60 * 1000, hashtagsCol);
+        hashtags.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } } );
+    }, 60 * 1000);
 
-    /*** HOUSE KEEEPING ***/
-
+    /*** streamer ***/
     var stream = twitter.stream('statuses/sample');
 
     stream.on('tweet', function(tweet) {
@@ -98,12 +82,12 @@ var setupStreamToDB = function(err, db) {
             var keywords = [];
 
             keywords = helpers.getLowerCaseKeywordsArray(tweet.text);
-            keywords = helpers.keepValidKeywords(keywords, forbiddenWords);
+            keywords = helpers.keepValidKeywords(keywords, params.config.forbiddenWords);
 
             if (keywords.length > 0)
             {
-                insertTweet(tweetsCol, keywords, tweet);
-                searchHashtags(hashtagsCol, keywords);
+                streamer.insertTweet(tweets, keywords, tweet);
+                streamer.insertHashtags(hashtags, keywords);
             }
             keywords = null;
         }
@@ -123,4 +107,4 @@ var setupStreamToDB = function(err, db) {
     });
 };
 
-MongoClient.connect(config.mongodb.url, setupStreamToDB);
+module.exports = streamer;
