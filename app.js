@@ -63,28 +63,28 @@ var getTweetsCount = function (tweetsCol, next)
     });
 };
 
-var searchHashtag = function (hashtagsCol, hashtag, next)
+var searchHashtag = function (hashtags, hashtag, next)
 {
-    var hashtags = helpers.getLowerCaseKeywordsArray(hashtag);
-    hashtag = hashtags[0];
+    var hashtagsArray = helpers.getLowerCaseKeywordsArray(hashtag);
+    hashtag = hashtagsArray[0];
 
-    hashtagsCol.findOne( { hashtag: hashtag }, function (err, doc)
+    hashtags.findOne( { hashtag: hashtag }, function (err, doc)
     {
         next(doc);
     });
 };
 
-var getHashtagLists = function (trendingCol, hashtagsCol, next)
+var getHashtagLists = function (trending, hashtags, next)
 {
     var trends = [];
     var popular = [];
 
-    trendingCol.find().sort( { zscore: -1, mentions: -1 }).limit(10)
+    trending.find().sort( { zscore: -1, mentions: -1 }).limit(10)
     .each(function(err, trend)
     {
         if (trend === null)
         {
-            hashtagsCol.find().sort( { mentions: -1 }).limit(10)
+            hashtags.find().sort( { mentions: -1 }).limit(10)
             .each(function(err, pop)
             {
                 if (pop === null)
@@ -109,8 +109,8 @@ MongoClient.connect(config.mongodb.url, function (err, db)
 {
     assert.equal(null, err);
     var tweetsCol = db.collection('tweets');
-    var hashtagsCol = db.collection('hashtags');
-    var trendingCol = db.collection('trending');
+    var hashtags = db.collection('hashtags');
+    var trending = db.collection('trending');
 
     /*** web server setup ***/
 
@@ -128,9 +128,35 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     //return trending hashtags
     app.get('/', function (req, res)
     {
-        getHashtagLists(trendingCol, hashtagsCol, function(trending, popular)
+        getHashtagLists(trending, hashtags, function(trending, popular)
         {
             res.render('index', { trendingList: trending, popularList: popular });
+        });
+    });
+
+    app.post('/subscribe', function (reg, res) // FIXME
+    {
+        mailgun.lists(params.config.mailgun.mailingList).members().
+        add({ members: members, subscribed: true }, function (err, body) {
+            console.log(body);
+            if (err) {
+                res.send("Error - check console");
+            }
+            else {
+                res.send("Added to mailing list");
+            }
+        });
+    });
+
+    app.get('/email', function (reg, res)
+    {
+        var hashtag = '#hiphop';
+        var encoded = encodeURIComponent(hashtag);
+        res.render('email', {
+            hashtag: hashtag,
+            trending_url: 'http://162.243.61.98:8080/keywords/' + encoded,
+            google_url: 'https://www.google.lt/search?q=' + encoded,
+            twitter_url: 'https://twitter.com/search?q=' + encoded,
         });
     });
 
@@ -149,7 +175,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         {
             if (helpers.isHashtag(req.params.keyword))
             {
-                searchHashtag(hashtagsCol, query, function(hashtagData)
+                searchHashtag(hashtags, query, function(hashtagData)
                 {
                     var hashtagGraph = [];
                     if (hashtagData === null || hashtagData.hours === undefined)
