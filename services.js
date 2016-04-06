@@ -22,8 +22,15 @@ MongoClient.connect(config.mongodb.url, function(err, db) {
     var emails = db.collection('emails');
     var subscribers = db.collection('subscribers');
 
-    streamer.init({tweets: tweets, hashtags: hashtags, config: config});
-    analysis.init({tweets: tweets, hashtags: hashtags, trending: trending, config: config});
-    mailer.init({emails: emails, subscribers:subscribers, trending: trending, config: config});
+    streamer({tweets: tweets, hashtags: hashtags, config: config});
+    analysis({tweets: tweets, hashtags: hashtags, trending: trending, config: config});
+    mailer({emails: emails, subscribers:subscribers, trending: trending, config: config});
     console.log('Components initialized');
+});
+
+process.on('uncaughtException', function (err)
+{
+    console.error('uncaughtException: ', err.message);
+    console.error(err.stack);
+    process.exit(1);
 });
