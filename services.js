@@ -10,7 +10,7 @@ var ObjectId = require('mongodb').ObjectID;
 var config = require('./config');
 var streamer = require('./components/streamer');
 var analysis = require('./components/analysis');
-//var mailer = require('./components/mailer');
+var mailer = require('./components/mailer');
 
 MongoClient.connect(config.mongodb.url, function(err, db) {
     assert.equal(null, err);
@@ -19,9 +19,11 @@ MongoClient.connect(config.mongodb.url, function(err, db) {
     var tweets = db.collection('tweets');
     var hashtags = db.collection('hashtags');
     var trending = db.collection('trending');
+    var emails = db.collection('emails');
+    var subscribers = db.collection('subscribers');
 
     streamer.init({tweets: tweets, hashtags: hashtags, config: config});
     analysis.init({tweets: tweets, hashtags: hashtags, trending: trending, config: config});
-    //mailer.init({tweets: tweets, hashtags: hashtags, config: config});
+    mailer.init({emails: emails, subscribers:subscribers, trending: trending, config: config});
     console.log('Components initialized');
 });

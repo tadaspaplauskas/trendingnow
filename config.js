@@ -1,10 +1,15 @@
 var config = {};
 
+config.admin = {};
+config.admin.email = 'contact@trendingnow.io';
+
 config.commonSenseEdge = 150; // do not let pass hashtags with less that that amount of mentions
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
+config.zScoreEmail = 3; // idunnolol
 
-//config.mailgun = {apiKey: api_key, domain: domain};
+config.mailgun = {apiKey: 'key-8e0f686bcd2d829f37db872bf81f6a06', domain: 'sandbox9bffcf33276b457ca27bc8d1fea59cc4.mailgun.org'};
+config.mailgun.mailingList = 'trending@sandbox9bffcf33276b457ca27bc8d1fea59cc4.mailgun.org';
 
 config.twitter = {
     consumer_key: 'tqMsxyNJ57fsBU5kfhNGCmOvD',
@@ -19,8 +24,9 @@ config.mongodb = {
 };
 
 config.forbiddenWords = [
+'#sale', 'sale', 'deals', '#deals',
 'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
-'#nowplaying', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',
+'#nowplaying', 'adult', '#adult', 'teen', '#teen', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',
 '#sexy', '#xxx', '#naked', '#horny', '#whore', '#boobs', '#tits', '#anal', '#deepthroat',
 'amp', 'are', 'more', 'via', 'its', 'http', 'https', 'is', 'rt',
 'the',

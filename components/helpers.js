@@ -89,4 +89,19 @@ helpers.sum = function (array)
     return array.reduce(function(a, b) { return a + b; }, 0);
 };
 
+helpers.googleSearchUrl = function (keyword)
+{
+    return 'https://www.google.lt/search?q=' + encodeURIComponent(keyword);
+};
+
+helpers.twitterSearchUrl = function (keyword)
+{
+    return 'https://twitter.com/search?q=' + encodeURIComponent(keyword);
+};
+
+helpers.searchUrl = function (keyword)
+{
+    return 'http://162.243.61.98:8080/keywords/' + encodeURIComponent(keyword);
+};
+
 module.exports = helpers;
