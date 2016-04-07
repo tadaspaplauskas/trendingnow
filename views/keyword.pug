@@ -47,7 +47,6 @@ block scripts
             }
 
 block content
-
     .row
         .col-md-4
             include ./subscribe_form.pug
@@ -61,6 +60,10 @@ block content
                         = ' '
                 else
                     |I'm afraid that's not a very popular topic, sorry.
+            p(style = "margin-top: 2em")
+                a.btn-default.btn(href = search.twitter target="_blank") Search on Twitter
+                | &nbsp;
+                a.btn-default.btn(href = search.google target="_blank") Search on Google
         .col-md-6
 
     .row.graph

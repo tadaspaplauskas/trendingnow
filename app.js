@@ -162,7 +162,6 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                 if (err) {
                     console.error(err);
                 }
-                console.log(body);
                 res.render('subscription_requested', { err: err });
             });
         }
@@ -213,6 +212,8 @@ MongoClient.connect(config.mongodb.url, function (err, db)
 
         searchKeywords(tweetsCol, query, function(related)
         {
+            var search = { google: helpers.googleSearchUrl(req.params.keyword), twitter: helpers.twitterSearchUrl(req.params.keyword) };
+
             if (helpers.isHashtag(req.params.keyword))
             {
                 searchHashtag(hashtags, query, function(hashtagData)
@@ -244,12 +245,12 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                             }
                         } while (hashtagGraph.length <= 23);
                     }
-                    res.render('keyword', { keyword: req.params.keyword, related: related, hashtagGraph: JSON.stringify(hashtagGraph) } );
+                    res.render('keyword', { keyword: req.params.keyword, related: related, search: search, hashtagGraph: JSON.stringify(hashtagGraph) } );
                 });
             }
             else
             {
-                res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: null } );
+                res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: null, search: search } );
             }
         });
     });
