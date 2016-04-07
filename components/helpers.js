@@ -2,7 +2,8 @@ var helpers = {};
 
 helpers.removePunctuation = function (str)
 {
-    return str.replace(/\n/g,  ' ').replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, ''); //.replace(/[^\w# ]/g, '');
+    //return str.replace(/\n/g,  ' ').replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, '');
+    return str.replace(/\n/g,  ' ').replace(/[^\w# ]/g, '');
 };
 
 // prepare keywords array (used for search)
@@ -32,7 +33,7 @@ helpers.timestamp = function()
 
 helpers.isHashtag = function (hashtag)
 {
-  return (hashtag.charAt(0) === '#' && hashtag.length > 2);
+  return (hashtag.charAt(0) === '#' && hashtag.length > 4);
 };
 
 helpers.keepValidKeywords = function (keywords, forbidden) //removes links and most common words
@@ -45,30 +46,30 @@ helpers.keepValidKeywords = function (keywords, forbidden) //removes links and m
 
 helpers.average = function (data)
 {
-  var sum = data.reduce(function(sum, value){
-    return sum + value;
-  }, 0);
+    var sum = data.reduce(function(sum, value){
+        return sum + value;
+    }, 0);
 
-  var avg = sum / data.length;
+    var avg = sum / data.length;
 
-  return avg;
+    return avg;
 };
 
 helpers.standardDeviation = function (values)
 {
-  var avg = helpers.average(values);
+    var avg = helpers.average(values);
 
-  var squareDiffs = values.map(function(value){
-    var diff = value - avg;
-    var sqrDiff = diff * diff;
-    return sqrDiff;
-  });
+    var squareDiffs = values.map(function(value){
+        var diff = value - avg;
+        var sqrDiff = diff * diff;
+        return sqrDiff;
+    });
 
-  var avgSquareDiff = helpers.average(squareDiffs);
+    var avgSquareDiff = helpers.average(squareDiffs);
 
-  var stdDev = Math.sqrt(avgSquareDiff);
+    var stdDev = Math.sqrt(avgSquareDiff);
 
-  return stdDev;
+    return stdDev;
 };
 
 helpers.zScore = function (current, values)
@@ -102,6 +103,11 @@ helpers.twitterSearchUrl = function (keyword)
 helpers.searchUrl = function (keyword)
 {
     return 'http://162.243.61.98:8080/keywords/' + encodeURIComponent(keyword);
+};
+
+helpers.url = function (path, params)
+{
+    return 'http://162.243.61.98:8080/' + path + encodeURIComponent(params);
 };
 
 module.exports = helpers;

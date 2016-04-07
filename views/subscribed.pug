@@ -1,0 +1,9 @@
+extends ./master.pug
+
+block content
+    if(err)
+        h3 Oops...
+        p= err.message
+    else
+        h3 Sucess!
+        p You are now subscribed to the mailing list. We will notify you the moment we find something that might be interesting.

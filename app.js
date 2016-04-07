@@ -6,6 +6,9 @@ var express = require('express');
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
+var Mailgun = require('mailgun-js');
+var validator = require('validator');
+var pug = require('pug');
 
 /*** search happens here ***/
 var searchKeywords = function(tweetsCol, query, next)
@@ -115,6 +118,9 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     /*** web server setup ***/
 
     var app = express();
+    var bodyParser = require('body-parser');
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
     app.set('view engine', 'pug');
 
     app.use(express.static('public'));
@@ -134,18 +140,52 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         });
     });
 
-    app.post('/subscribe', function (reg, res) // FIXME
+    app.post('/subscribe', function (req, res)
     {
-        mailgun.lists(params.config.mailgun.mailingList).members().
-        add({ members: members, subscribed: true }, function (err, body) {
-            console.log(body);
-            if (err) {
-                res.send("Error - check console");
-            }
-            else {
-                res.send("Added to mailing list");
-            }
-        });
+        if (!validator.isEmail(req.body.email))
+        {
+            res.render('subscribed', { err: {message: 'Please provide a correct email address.'} });
+            return;
+        }
+        else
+        {
+            var mailgun = new Mailgun(config.mailgun);
+
+            var confirm_url = helpers.url('subscription_confirmed/', req.body.email);
+
+            mailgun.messages().send({
+                from: config.admin.email,
+                to: req.body.email,
+                subject: 'Please confirm your subscription to trendingnow.io',
+                html: pug.renderFile('views/email_confirm.pug', {err: err, confirm_url: confirm_url})
+            }, function (err, body) {
+                if (err) {
+                    console.error(err);
+                }
+                console.log(body);
+                res.render('subscription_requested', { err: err });
+            });
+        }
+    });
+
+    app.get('/subscription_confirmed/:email', function (req, res)
+    {
+        if (!validator.isEmail(req.params.email))
+        {
+            res.render('subscribed', { err: {message: 'Please provide a correct email address.'} });
+            return;
+        }
+        else
+        {
+            var mailgun = new Mailgun(config.mailgun);
+            mailgun.lists(config.mailgun.mailingList).members().
+            create({ address: req.params.email, subscribed: true }, function (err, body) {
+                if (err) {
+                    console.error(err);
+                }
+                res.render('subscribed', { err: err });
+            });
+        }
     });
 
     app.get('/email', function (reg, res)
