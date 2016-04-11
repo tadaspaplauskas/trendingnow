@@ -1,30 +1,33 @@
+require('dotenv').config();
+
 var config = {};
 
 config.admin = {};
 config.admin.email = 'contact@trendingnow.io';
 
-config.commonSenseEdge = 150; // do not let pass hashtags with less that that amount of mentions
+config.commonSenseEdge = 200; // do not let pass hashtags with less that that amount of mentions. 150; 200;
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
-config.zScoreEmail = 4; // idunnolol: 3; 3.5
+config.zScoreEmail = 4.5; // idunnolol: 3; 3.5; 4
 
-config.mailgun = {apiKey: 'key-8e0f686bcd2d829f37db872bf81f6a06', domain: 'sandbox9bffcf33276b457ca27bc8d1fea59cc4.mailgun.org'};
-config.mailgun.mailingList = 'trending@sandbox9bffcf33276b457ca27bc8d1fea59cc4.mailgun.org';
+config.mailgun = {apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN};
+config.mailgun.mailingList = process.env.MAILGUN_MAILING_LIST;
 
 config.twitter = {
-    consumer_key: 'tqMsxyNJ57fsBU5kfhNGCmOvD',
-    consumer_secret: 'H1YkMj0dDtLh95bD2pwk02sJLupqbN3YzkyF5jO21KuZl03UXu',
-    access_token: '23313645-O6qC4ZPisg4Eswke7K2DXoer4KZgnhPnq6pebzInH',
-    access_token_secret: 'DREtpcSvQpnz080qtHKZWXpRDFfbvRxdAIzBBIgqL3hxN',
+    consumer_key: process.env.TWITTER_CONSUMER_KEY,
+    consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
+    access_token: process.env.TWITTER_ACCESS_TOKEN,
+    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
     timeout_ms: 60 * 1000,
 };
 
 config.mongodb = {
-    url: 'mongodb://127.0.0.1:27017/twitter_feed'
+    url: process.env.MONGODB_URL
 };
 
 config.forbiddenWords = [
-'#sale', 'sale', 'deals', '#deals', 'nude', '#nude', 'quote', '#quote', '#beauty',
+'ad', '#ad',
+'#breakingnews', '#sale', 'sale', 'deals', '#deals', 'nude', '#nude', 'quote', '#quote', '#beauty', '#followtrick', 'followtrick',
 'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
 '#nowplaying', 'adult', '#adult', 'teen', '#teen', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',
 '#sexy', '#xxx', '#naked', '#horny', '#whore', '#boobs', '#tits', '#anal', '#deepthroat',
