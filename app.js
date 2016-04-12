@@ -249,9 +249,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                 });
             }
             else
-            {
                 res.render('keyword', { title: req.params.keyword, keyword: req.params.keyword, related: related, hashtagData: null, search: search } );
-            }
         });
     });
 
