@@ -48,18 +48,18 @@ var streamer = function (params)
     {
         var date = new Date();
         // nullify mentions counter when day starts
-        if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0)
+        if (date.getHours() === 0 && date.getMinutes() === 0)
         {
             hashtags.update({}, { $set : { mentions: 0 } }, { multi: true} );
         }
-        if (date.getMinutes() === 0 && date.getSeconds() === 0)
+        if (date.getMinutes() === 0)
         {
             var update = {};
             update['hours.' + date.getHours()] = 0;
 
             hashtags.update({}, { $set : update }, { multi: true} );
         }
-    }, 1000);
+    }, 60 * 1000);
 
     setInterval(function()
     {
