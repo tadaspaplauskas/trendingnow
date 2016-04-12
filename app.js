@@ -245,12 +245,12 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                             }
                         } while (hashtagGraph.length <= 23);
                     }
-                    res.render('keyword', { keyword: req.params.keyword, related: related, search: search, hashtagGraph: JSON.stringify(hashtagGraph) } );
+                    res.render('keyword', { title: req.params.keyword, keyword: req.params.keyword, related: related, search: search, hashtagGraph: JSON.stringify(hashtagGraph) } );
                 });
             }
             else
             {
-                res.render('keyword', { keyword: req.params.keyword, related: related, hashtagData: null, search: search } );
+                res.render('keyword', { title: req.params.keyword, keyword: req.params.keyword, related: related, hashtagData: null, search: search } );
             }
         });
     });
