@@ -13,7 +13,10 @@ var mailer = function (params)
         .each(function(err, trend)
         {
             if (err)
-                return console.error(err);
+            {
+                console.error(err);
+                return false;
+            }
             if (trend === null)
             {
                 return true;
@@ -26,7 +29,10 @@ var mailer = function (params)
                 function (err, doc)
                 {
                     if (err)
-                        return console.error(err);
+                    {
+                        console.error(err);
+                        return false;
+                    }
 
                     if (doc === null && trend.hashtag !== undefined) // send to subscribers, save to emails
                     {
@@ -38,18 +44,24 @@ var mailer = function (params)
                             twitter_url: helpers.twitterSearchUrl(hashtag),
                         }, function(err, html) {
                             if (err)
-                                return console.error(err);
+                            {
+                                console.error(err);
+                                return false;
+                            }
                             // format email
                             var data = {
-                                from: params.config.admin.email,
+                                from: params.config.admin.name +' <'+ params.config.admin.email +'>',
                                 to: params.config.mailgun.mailingList,
-                                subject: 'Looks like ' + trend.hashtag + ' is trending ' + trend.zscore,
+                                subject: 'Looks like ' + trend.hashtag + ' is trending ' + trend.zscore + ' ' + trend.mentions,
                                 html: html
                             };
                             // send email
                             mailgun.messages().send(data, function (err, body) {
                                 if (err)
-                                    return console.error(err);
+                                {
+                                    console.error(err);
+                                    return false;
+                                }
                                 // store email
                                 emails.insertOne({hashtag: trend.hashtag, email: data, created_at: new Date()});
                             });

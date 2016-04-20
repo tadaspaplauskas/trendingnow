@@ -25,7 +25,7 @@ MongoClient.connect(config.mongodb.url, function(err, db) {
     streamer({tweets: tweets, hashtags: hashtags, config: config});
     analysis({tweets: tweets, hashtags: hashtags, trending: trending, config: config});
     mailer({emails: emails, subscribers:subscribers, trending: trending, config: config});
-    console.log('Components initialized');
+    console.log('Components initialized in ' + process.env.NODE_ENV + ' mode');
 });
 
 process.on('uncaughtException', function (err)

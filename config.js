@@ -2,13 +2,15 @@ require('dotenv').config();
 
 var config = {};
 
-config.admin = {};
-config.admin.email = 'contact@trendingnow.io';
+config.url = 'http://trendingnow.io';
 
-config.commonSenseEdge = 200; // do not let pass hashtags with less that that amount of mentions. 150; 200;
+config.admin = { email: 'contact@trendingnow.io',
+                name: 'trendingnow.io'};
+
+config.commonSenseEdge = 400; // do not let pass hashtags with less that that amount of mentions. 150; 200;
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
-config.zScoreEmail = 4.5; // idunnolol: 3; 3.5; 4
+config.zScoreEmail = 4; // idunnolol: 3; 3.5; 4; 4.5
 
 config.mailgun = {apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN};
 config.mailgun.mailingList = process.env.MAILGUN_MAILING_LIST;
@@ -26,7 +28,7 @@ config.mongodb = {
 };
 
 config.forbiddenWords = [
-'ad', '#ad',
+'ad', '#ad', '#nsfw', 'nsfw',
 '#breakingnews', '#sale', 'sale', 'deals', '#deals', 'nude', '#nude', 'quote', '#quote', '#beauty', '#followtrick', 'followtrick',
 'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
 '#nowplaying', 'adult', '#adult', 'teen', '#teen', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',

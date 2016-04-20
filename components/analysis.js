@@ -37,7 +37,10 @@ var analysis = function (params)
         hashtags.find({}).each(function (err, doc)
         {
             if (err)
-                return console.error(err);
+            {
+                console.error(err);
+                return false;
+            }
 
             if (doc === null)
                 return 0;

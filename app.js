@@ -126,7 +126,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     app.use(express.static('public'));
 
     app.listen(8080, function () {
-        console.log('Listening on port 8080!');
+        console.log('Listening on port 8080 in ' + process.env.NODE_ENV + ' mode');
     });
 
     /*** routing ***/
@@ -154,7 +154,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
             var confirm_url = helpers.url('subscription_confirmed/', req.body.email);
 
             mailgun.messages().send({
-                from: config.admin.email,
+                from: config.admin.name +' <'+ config.admin.email +'>',
                 to: req.body.email,
                 subject: 'Please confirm your subscription to trendingnow.io',
                 html: pug.renderFile('views/email_confirm.pug', {err: err, confirm_url: confirm_url})
@@ -193,7 +193,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         var encoded = encodeURIComponent(hashtag);
         res.render('email', {
             hashtag: hashtag,
-            trending_url: 'http://162.243.61.98:8080/keywords/' + encoded,
+            trending_url: config.url + '/keywords/' + encoded,
             google_url: 'https://www.google.lt/search?q=' + encoded,
             twitter_url: 'https://twitter.com/search?q=' + encoded,
         });

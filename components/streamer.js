@@ -6,14 +6,26 @@ var streamer = function (params)
 
     twitter = new require('twit')(params.config.twitter);
 
+
     var insertTweet = function(tweets, keywords, tweet)
     {
-        tweets.insertOne( {
+        insertTweet.cache.push({
             "keywords_lower" : keywords,
-            //"text" : tweet.text,
             "timestamp" : Math.round(tweet.timestamp_ms / 1000)
         });
+
+        if (insertTweet.cache.length >= 100)
+        {
+            tweets.insertMany(insertTweet.cache, { ordered: false, w:0 }, function(err, r)
+            {
+                if (err !== null)
+                    console.log(err);
+
+            });
+            insertTweet.cache = [];
+        }
     };
+    insertTweet.cache = [];
 
     var insertHashtags = function(hashtags, keywords)
     {
@@ -29,18 +41,37 @@ var streamer = function (params)
 
             if (helpers.isHashtag(hashtag))
             {
-                hashtags.updateOne(
-                { hashtag: hashtag },
-                { $inc: updateObj, $set: { updated_at: new Date() } },
-                { upsert: true });
+                insertHashtags.cache.push({
+                    updateOne: {
+                        filter: { hashtag: hashtag },
+                        update: { $inc: updateObj, $set: { updated_at: new Date() } },
+                        upsert: true
+                    }
+                });
             }
         }
+
+        if (insertHashtags.cache.length >= 100)
+        {
+            hashtags.bulkWrite(insertHashtags.cache, { ordered: false, w:0 }, function (err, res)
+            {
+                if (err !== null)
+                    console.log(err);
+            });
+            insertHashtags.cache = [];
+        }
     };
+    insertHashtags.cache = [];
 
     //remove records older than 24hours
     setInterval(function()
     {
-        tweets.remove( { timestamp: { $lt: helpers.timestamp() - 3600 * 24 } }); // keep for 24 hours
+        tweets.remove( { timestamp: { $lt: helpers.timestamp() - 3600 * 24 } }, { w: 0 } ); // keep for 24 hours
+    }, 60 * 1000);
+
+    setInterval(function()
+    {
+        hashtags.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } }, { w: 0 } );
     }, 60 * 1000);
 
     // every hour reset current hour's counter
@@ -61,16 +92,11 @@ var streamer = function (params)
         }
     }, 60 * 1000);
 
-    setInterval(function()
-    {
-        hashtags.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } } );
-    }, 60 * 1000);
-
     /*** streamer ***/
-    var stream = twitter.stream('statuses/sample');
+    var stream = twitter.stream('statuses/sample', { language: 'en', filter_level: 'low' }); // filter level also a possibility
 
     stream.on('tweet', function(tweet) {
-        if (tweet.text !== undefined && tweet.lang === 'en') // only english at least for now
+        if (tweet.text !== undefined)
         {
             var keywords = [];
 

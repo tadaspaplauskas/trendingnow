@@ -102,12 +102,12 @@ helpers.twitterSearchUrl = function (keyword)
 
 helpers.searchUrl = function (keyword)
 {
-    return 'http://162.243.61.98:8080/keywords/' + encodeURIComponent(keyword);
+    return 'http://trendingnow.io/keywords/' + encodeURIComponent(keyword);
 };
 
 helpers.url = function (path, params)
 {
-    return 'http://162.243.61.98:8080/' + path + encodeURIComponent(params);
+    return 'http://trendingnow.io/' + path + encodeURIComponent(params);
 };
 
 module.exports = helpers;
