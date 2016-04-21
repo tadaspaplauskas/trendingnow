@@ -114,6 +114,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     var tweetsCol = db.collection('tweets');
     var hashtags = db.collection('hashtags');
     var trending = db.collection('trending');
+    var subscribers = db.collection('subscribers');
 
     /*** web server setup ***/
 
@@ -176,13 +177,26 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         }
         else
         {
-            var mailgun = new Mailgun(config.mailgun);
-            mailgun.lists(config.mailgun.mailingList).members().
-            create({ address: req.params.email, subscribed: true }, function (err, body) {
-                if (err) {
-                    console.error(err);
+            subscribers.findOne( {email: req.params.email }, function (err, result)
+            {
+                if (result === null)
+                {
+                    subscribers.insertOne({email: req.params.email, created_at: new Date() }, function (err, body) {
+                        if (err)
+                        {
+                            console.error(err);
+                            res.render('subscribed', { err: 'Something went wrong, please try again in a minute.' });
+                        }
+                        else
+                        {
+                            res.render('subscribed');
+                        }
+                    });
                 }
-                res.render('subscribed', { err: err });
+                else
+                {
+                    res.render('subscribed', { err: 'You are already subscribed!' });
+                }
             });
         }
     });

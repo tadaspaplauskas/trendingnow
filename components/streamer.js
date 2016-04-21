@@ -93,7 +93,7 @@ var streamer = function (params)
     }, 60 * 1000);
 
     /*** streamer ***/
-    var stream = twitter.stream('statuses/sample', { language: 'en', filter_level: 'low' }); // filter level also a possibility
+    var stream = twitter.stream('statuses/sample', { 'language': 'en', 'filter_level': 'low' }); // filter level also a possibility
 
     stream.on('tweet', function(tweet) {
         if (tweet.text !== undefined)
