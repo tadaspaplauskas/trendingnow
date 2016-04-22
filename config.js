@@ -28,7 +28,7 @@ config.mongodb = {
 };
 
 config.forbiddenWords = [
-'ad', '#ad', '#nsfw', 'nsfw',
+'ad', '#ad', '#nsfw', 'nsfw', '#love',
 '#breakingnews', '#sale', 'sale', 'deals', '#deals', 'nude', '#nude', 'quote', '#quote', '#beauty', '#followtrick', 'followtrick',
 'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
 '#nowplaying', 'adult', '#adult', 'teen', '#teen', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',

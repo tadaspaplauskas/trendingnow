@@ -41,7 +41,8 @@ var mailer = function (params)
                             hashtag: hashtag,
                             trending_url: helpers.searchUrl(hashtag),
                             google_url: helpers.googleSearchUrl(hashtag),
-                            twitter_url: helpers.twitterSearchUrl(hashtag),
+                            twitter_url: helpers.twitterSearchUrl(hashtag)/*, TODO FIXME
+                            blacklist_url: config.url +*/
                         }, function(err, html) {
                             if (err)
                             {

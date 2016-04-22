@@ -3,9 +3,10 @@
 var config = require('./config');
 var helpers = require('./components/helpers');
 var express = require('express');
-var MongoClient = require('mongodb').MongoClient;
+var mongodb = require('mongodb');
+var MongoClient = mongodb.MongoClient;
 var assert = require('assert');
-var ObjectId = require('mongodb').ObjectID;
+var ObjectID = mongodb.ObjectID;
 var Mailgun = require('mailgun-js');
 var validator = require('validator');
 var pug = require('pug');
@@ -130,6 +131,34 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         console.log('Listening on port 8080 in ' + process.env.NODE_ENV + ' mode');
     });
 
+    // local helpers
+    var findSubscriber = function (req, res, next)
+    {
+        var id;
+        try
+        {
+            id = ObjectID( req.params.subscriber );
+        }
+        catch (e)
+        {
+            res.render('failure', { message: 'Enter correct id' });
+            return;
+        }
+
+        subscribers.findOne( { _id: id }, function (err, subscriber)
+        {
+            if (subscriber === null || err)
+            {
+                res.render('failure', { message: 'No such subscriber in my database! Did I get something wrong or did you?..' });
+                return;
+            }
+            var blacklist = subscriber.blacklist === undefined ? [] : subscriber.blacklist;
+            var item = req.params.item;
+
+            next(subscriber, id);
+        });
+    };
+
     /*** routing ***/
 
     //return trending hashtags
@@ -141,7 +170,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         });
     });
 
-    app.post('/subscribe', function (req, res)
+    app.post('/subscribers', function (req, res)
     {
         if (!validator.isEmail(req.body.email))
         {
@@ -152,7 +181,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         {
             var mailgun = new Mailgun(config.mailgun);
 
-            var confirm_url = helpers.url('subscription_confirmed/', req.body.email);
+            var confirm_url = helpers.url('subscribers/confirm/', req.body.email);
 
             mailgun.messages().send({
                 from: config.admin.name +' <'+ config.admin.email +'>',
@@ -168,11 +197,11 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         }
     });
 
-    app.get('/subscription_confirmed/:email', function (req, res)
+    app.get('/subscribers/confirm/:email', function (req, res)
     {
         if (!validator.isEmail(req.params.email))
         {
-            res.render('subscribed', { err: {message: 'Please provide a correct email address.'} });
+            res.render('failure', { message: 'Please provide a correct email address.'} );
             return;
         }
         else
@@ -185,20 +214,83 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                         if (err)
                         {
                             console.error(err);
-                            res.render('subscribed', { err: 'Something went wrong, please try again in a minute.' });
+                            res.render('failure', { message: 'Something went wrong, please try again in a minute.' });
                         }
                         else
                         {
-                            res.render('subscribed');
+                            res.render('success', { message: 'You are now subscribed to the mailing list. We will notify you as soon as we find something that might be interesting.'});
                         }
                     });
                 }
                 else
                 {
-                    res.render('subscribed', { err: 'You are already subscribed!' });
+                    res.render('failure', { message: 'You are already subscribed!' });
                 }
             });
         }
+    });
+
+    app.get('/subscribers/:subscriber/blacklist/:item', function (req, res)
+    {
+        findSubscriber(req, res, function(subscriber) {
+            var blacklist = subscriber.blacklist === undefined ? [] : subscriber.blacklist;
+            var item = req.params.item;
+
+            if (blacklist.indexOf(item) !== -1)
+            {
+                res.render('success', { message: 'Already blacklisted.', close: true });
+                return;
+            }
+
+            blacklist.push(item);
+
+            subscribers.updateOne({ _id: id }, { $set: { blacklist: blacklist, updated_at: new Date() }}, function (err, body) {
+                if (err)
+                {
+                    console.error(err);
+                    res.render('failure', { err: 'Something went wrong, please try again in a minute.' });
+                }
+                else
+                {
+                    res.render('success', { message: 'Blacklisted successfully! You will not hear about it again.', close: true });
+                }
+            });
+        });
+    });
+
+    app.get('/subscribers/:subscriber/blacklist_remove/:item', function (req, res)
+    {
+        findSubscriber(req, res, function(subscriber, id) {
+            var blacklist = subscriber.blacklist;
+            var index = blacklist.indexOf(req.params.item);
+
+            if (index !== -1)
+            {
+                blacklist.splice(index, 1);
+
+                subscribers.updateOne({ _id: id }, { $set: { blacklist: blacklist, updated_at: new Date() }}, function (err, body) {
+                    if (err)
+                    {
+                        console.error(err);
+                        res.render('failure', { err: 'Something went wrong, please try again in a minute.' });
+                    }
+                    else
+                    {
+                        res.redirect(req.header('Referer') || '/');
+                    }
+                });
+            }
+        });
+    });
+
+    app.get('/subscribers/:subscriber', function (req, res)
+    {
+        findSubscriber(req, res, function(subscriber) {
+            res.render('subscriber', {
+                title: 'Preferences',
+                subscriber: subscriber,
+                remove_link: '/subscribers/' + subscriber._id + '/blacklist_remove/' });
+        });
     });
 
     app.get('/email', function (reg, res)
@@ -209,7 +301,8 @@ MongoClient.connect(config.mongodb.url, function (err, db)
             hashtag: hashtag,
             trending_url: config.url + '/keywords/' + encoded,
             google_url: 'https://www.google.lt/search?q=' + encoded,
-            twitter_url: 'https://twitter.com/search?q=' + encoded,
+            twitter_url: 'https://twitter.com/search?q=' + encoded
+
         });
     });
 
