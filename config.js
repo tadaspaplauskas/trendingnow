@@ -7,10 +7,12 @@ config.url = 'http://trendingnow.io';
 config.admin = { email: 'contact@trendingnow.io',
                 name: 'trendingnow.io'};
 
-config.commonSenseEdge = 400; // do not let pass hashtags with less that that amount of mentions. 150; 200;
+config.commonSenseEdgeHashtag = 300; // do not let pass hashtags with less that that amount of mentions. 150; 200;
+config.commonSenseEdgeLink = 300;
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
-config.zScoreEmail = 4; // idunnolol: 3; 3.5; 4; 4.5
+config.zScoreHashtagEmail = 2.58;
+config.zScoreLinkEmail = 2.58; // idunnolol: 3; 3.5; 4; 4.5
 
 config.mailgun = {apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN};
 config.mailgun.mailingList = process.env.MAILGUN_MAILING_LIST;
@@ -27,13 +29,99 @@ config.mongodb = {
     url: process.env.MONGODB_URL
 };
 
+config.messenger = {
+    token: 'EAABupC0sX0QBAChTTImUeWX51GpBgG8c2WYoyNjrbgoynF9Poo8kK8zZBDYVUXNn3WZA7KAcD7LRdmMTYVqWNr8qFYxPfQTxOVmeBQOxqTvKoHqefftjSysJal89JTgx3LfGpcfKNi5R7UUi9ajDlrajvTzvMh4KNQZBZBcuWAZDZD',
+    url: 'https://graph.facebook.com/v2.6/me' };
+// link filter
+config.linksFilter = [
+'flwrs',
+'gigam.',
+'crowdfireapp.',
+'/famous',
+
+
+];
+// if only this part of a word matches, the whole word is removed
+config.filter = [
+'#voice',
+'nowshowing',
+'newvideo',
+'#news',
+'video',
+'#aldub',
+'amateur',
+'anal',
+'amateur',
+'wife',
+'dick',
+'mirrorphotos',
+'porngif',
+'fuck',
+'adult',
+'teen',
+'follow',
+'giveaway',
+'cumshot',
+'blowjob',
+'sex',
+'porn',
+'fuck',
+'ass',
+'pussy',
+'sexy',
+'xxx',
+'naked',
+'horny',
+'whore',
+'boobs',
+'tits',
+'anal',
+'deepthroat',
+'http',
+'https',
+];
+
+// complete words like this are removed
 config.forbiddenWords = [
-'ad', '#ad', '#nsfw', 'nsfw', '#love',
-'#breakingnews', '#sale', 'sale', 'deals', '#deals', 'nude', '#nude', 'quote', '#quote', '#beauty', '#followtrick', 'followtrick',
-'hot','amateur','anal','sex','cum','girls','#cam','wet','#hardcore','#amateursex','#amateur','wife','dick','mirrorphotos','#porngif','#analvideos','#analtube','fuck',
-'#nowplaying', 'adult', '#adult', 'teen', '#teen', '#follow', '#hot', '#giveaway', 'giveaway', '#androidgames', '#teamfollowback', '#retweet', '#f4f', '#twitter', '#cumshot', '#blowjob', '#sex', '#porn', '#fuck', '#ass', '#pussy',
-'#sexy', '#xxx', '#naked', '#horny', '#whore', '#boobs', '#tits', '#anal', '#deepthroat',
-'amp', 'are', 'more', 'via', 'its', 'http', 'https', 'is', 'rt',
+
+'nsfw',
+'#love',
+'#music',
+'#android',
+'#breakingnews',
+'quote',
+'#quote',
+'#beauty',
+'#followtrick',
+'followtrick',
+'#sale',
+'sale',
+'deals',
+'#deals',
+'nude',
+'#nude',
+'hot',
+'sex',
+'wet',
+'cum',
+'girls',
+'#cam',
+'#hardcore',
+'#twitter',
+'#androidgames',
+'#teamfollowback',
+'#retweet',
+'#f4f',
+'#nowplaying',
+'amp',
+'are',
+'more',
+'via',
+'its',
+'ad',
+'#ad',
+'is',
+'rt',
 'the',
 'of',
 'and',

@@ -3,3 +3,7 @@ extends ./master.pug
 block content
     h3 Success!
     p= message
+
+if(close)
+    script.
+        setTimeout(function() { window.close(); }, 3000);

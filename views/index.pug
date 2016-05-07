@@ -2,30 +2,55 @@ extends ./master.pug
 
 block content
     .row
-        .col-md-4
+        .col-md-2
             include ./subscribe_form.pug
 
-        .col-md-4.fade-in-faster
-            h2 Trending right now
+        .col-md-2.fade-in-faster
+            h2 Trending hashtags
 
-            if trendingList && trendingList.length > 0
+            if trendingHashtagsList && trendingHashtagsList.length > 0
                 ul.list-unstyled.fade-in-slower
-                    each hashtag in trendingList
+                    each hashtag in trendingHashtagsList
                         li.fade-in-slower
                             a(href='keywords/' + escape(hashtag.hashtag))= hashtag.hashtag
                             | <!-- #{hashtag.zscore} -->
             else
-                p Nothing noteworthy is happening on Twitter right now
+                p Nothing  show, sorry.
 
-        .col-md-4.fade-in-faster
-            h2 Most popular today
+        .col-md-2.fade-in-faster
+            h2 Popular hashtags
 
-            if popularList && popularList.length > 0
+            if popularHashtagsList && popularHashtagsList.length > 0
                 ul.list-unstyled.fade-in-slower
-                    each hashtag in popularList
-                        li
-                            a(href='keywords/' + encodeURIComponent(hashtag.hashtag))= hashtag.hashtag
+                    each hashtag in popularHashtagsList
+                        li.fade-in-slower
+                            a(href='keywords/' + escape(hashtag.hashtag))= hashtag.hashtag
                             | <!-- #{hashtag.mentions} -->
             else
-                p Nothing noteworthy is happening on Twitter right now
+                p Nothing to show, sorry.
 
+        .col-md-3.fade-in-faster
+            h2 Trending links
+
+            if trendingLinksList && trendingLinksList.length > 0
+                ul.list-unstyled.fade-in-slower
+                    each link in trendingLinksList
+                        li.fade-in-slower
+                            a(href=link.link target="_blank")= link.title
+                            | <!-- #{link.zscore} -->
+                            | <!-- #{link.mentions} -->
+            else
+                p Nothing to show, sorry.
+
+        .col-md-3.fade-in-faster
+            h2 Popular links
+
+            if popularLinksList && popularLinksList.length > 0
+                ul.list-unstyled.fade-in-slower
+                    each link in popularLinksList
+                        li.fade-in-slower
+                            a(href=link.link target="_blank")= link.title
+                            | <!-- #{link.zscore} -->
+                            | <!-- #{link.mentions} -->
+            else
+                p Nothing to show, sorry.

@@ -3,6 +3,7 @@ var streamer = function (params)
     var helpers = require('./helpers');
     var tweets = params.tweets;
     var hashtags = params.hashtags;
+    var links = params.links;
 
     twitter = new require('twit')(params.config.twitter);
 
@@ -18,9 +19,7 @@ var streamer = function (params)
         {
             tweets.insertMany(insertTweet.cache, { ordered: false, w:0 }, function(err, r)
             {
-                if (err !== null)
-                    console.log(err);
-
+                if (err) throw err;
             });
             insertTweet.cache = [];
         }
@@ -55,23 +54,48 @@ var streamer = function (params)
         {
             hashtags.bulkWrite(insertHashtags.cache, { ordered: false, w:0 }, function (err, res)
             {
-                if (err !== null)
-                    console.log(err);
+                if (err) throw err;
             });
             insertHashtags.cache = [];
         }
     };
     insertHashtags.cache = [];
 
+    var insertLinks = function(links, urls)
+    {
+        var updateObj = {};
+        updateObj['hours.' + helpers.getCurrentHour()] = 1;
+        updateObj.mentions = 1;
+
+        for (var i = 0; i < urls.length; i++)
+        {
+            insertLinks.cache.push({
+                updateOne: {
+                    filter: { link: urls[i].expanded_url },
+                    update: { $inc: updateObj, $set: { updated_at: new Date() } },
+                    upsert: true
+                }
+            });
+        }
+        if (insertLinks.cache.length >= 100)
+        {
+            links.bulkWrite(insertLinks.cache, { ordered: false, w:0 }, function (err, res)
+            {
+                if (err) throw err;
+            });
+            insertLinks.cache = [];
+        }
+    };
+    insertLinks.cache = [];
+
     //remove records older than 24hours
     setInterval(function()
     {
         tweets.remove( { timestamp: { $lt: helpers.timestamp() - 3600 * 24 } }, { w: 0 } ); // keep for 24 hours
-    }, 60 * 1000);
 
-    setInterval(function()
-    {
         hashtags.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } }, { w: 0 } );
+
+        links.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } }, { w: 0 } );
     }, 60 * 1000);
 
     // every hour reset current hour's counter
@@ -95,8 +119,12 @@ var streamer = function (params)
     /*** streamer ***/
     var stream = twitter.stream('statuses/sample', { 'language': 'en', 'filter_level': 'low' }); // filter level also a possibility
 
-    stream.on('tweet', function(tweet) {
-        if (tweet.text !== undefined)
+    stream.on('tweet', function(tweet)
+    {
+        var userCreatedAt = new Date(tweet.user.created_at);
+        var cutoffTimestamp = new Date() - 1000 * 3600 * 24 * 365;
+
+        if (tweet.text !== undefined && userCreatedAt < cutoffTimestamp) // if user is older than a year
         {
             var keywords = [];
 
@@ -107,6 +135,11 @@ var streamer = function (params)
             {
                 insertTweet(tweets, keywords, tweet);
                 insertHashtags(hashtags, keywords);
+            }
+            // save links too
+            if (tweet.entities.urls.length > 0)
+            {
+                insertLinks(links, tweet.entities.urls);
             }
             keywords = null;
         }

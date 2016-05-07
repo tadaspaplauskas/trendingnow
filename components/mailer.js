@@ -7,71 +7,214 @@ var mailer = function (params)
     var emails = params.emails;
     var subscribers = params.subscribers;
 
-    setInterval(function (trending)
+    /** functions ***/
+    var sendEmailToSubscriber = function(subscriber, trend)
     {
-        trending.find().sort( { zscore: -1, mentions: -1 }).limit(10)
+        // check if subscriber hasnt blacklisted the hashtag
+        if (subscriber.blacklist !== undefined && subscriber.blacklist.indexOf(trend.hashtag) !== -1)
+            return false;
+
+        if (trend.hashtag !== undefined)
+        {
+            pug.renderFile('views/email_hashtag.pug', {
+                hashtag: trend.hashtag,
+                trending_url: helpers.searchUrl(trend.hashtag),
+                google_url: helpers.googleSearchUrl(trend.hashtag),
+                twitter_url: helpers.twitterSearchUrl(trend.hashtag),
+                blacklist_url: helpers.blacklistUrl(subscriber._id, trend.hashtag)
+            }, function(err, html) {
+                if (err) throw err;
+
+                // format email
+                var data = {
+                    from: params.config.admin.name +' <'+ params.config.admin.email +'>',
+                    to: subscriber.email,
+                    subject: 'Looks like ' + trend.hashtag + ' is trending ' + trend.zscore + ' ' + trend.mentions,
+                    html: html
+                };
+                // send email
+                //console.log('sent!');
+                mailgun.messages().send(data, function (err, body) {
+                    if (err) throw err;
+                });
+            });
+            return true;
+        }
+        else if (trend.link !== undefined)
+        {
+            pug.renderFile('views/email_link.pug', {
+                link: trend.link,
+                title: trend.title,
+                blacklist_url: helpers.blacklistUrl(subscriber._id, trend.link)
+            }, function(err, html) {
+                if (err) throw err;
+
+                // format email
+                var data = {
+                    from: params.config.admin.name +' <'+ params.config.admin.email +'>',
+                    to: subscriber.email,
+                    subject: 'Looks like "'+ trend.title +'" is trending ' + trend.zscore + ' ' + trend.mentions,
+                    html: html
+                };
+                mailgun.messages().send(data, function (err, body) {
+                    if (err) throw err;
+                });
+            });
+            return true;
+        }
+    };
+
+    // send try-outs
+    setInterval(function (trending, emails, subscribers)
+    {
+        trending.find({
+            hashtag: { $exists: true },
+            zscore: { $gte: params.config.zScoreHashtagEmail },
+            mentions: { $gte: params.config.commonSenseEdgeHashtag } })
+        .sort( { zscore: -1, mentions: -1 }).limit(10)
         .each(function(err, trend)
         {
-            if (err)
-            {
-                console.error(err);
-                return false;
-            }
+            if (err) throw err;
+
             if (trend === null)
             {
-                return true;
+                return;
             }
-            // check if email threshold z-score is reached
-            else if (trend.zscore >= params.config.zScoreEmail)
+            // check if email about this tag was sent recently (last 24h)
+            emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 24 * 3600 * 1000) }},
+            function (err, doc)
             {
-                // check if email about this tag was sent recently (last 24h)
-                emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 24 * 3600 * 1000) }},
-                function (err, doc)
+                if (err) throw err;
+                if (doc !== null || trend.hashtag === undefined)
                 {
-                    if (err)
+                    return;
+                }
+
+                var subscribersArray = [];
+
+                // send to random ~10% subscribers, disable for now until we get at least 20-30
+                subscribers.find({ email: 'trendingnow.io@gmail.com' })/*function() { return Math.ceil(Math.random()*10) === 1 }*/
+                .each(function(err, subscriber)
+                {
+                    if (err) throw err;
+
+                    if (subscriber === null) // finished cursor
                     {
-                        console.error(err);
-                        return false;
+                        emails.insertOne({
+                            type: 'test',
+                            hashtag: trend.hashtag,
+                            zscore: trend.zscore,
+                            mentions: trend.mentions,
+                            blacklisted: 0,
+                            created_at: new Date(),
+                            tested_subscribers: subscribersArray,
+                            trend: trend
+                        });
+                        return;
                     }
 
-                    if (doc === null && trend.hashtag !== undefined) // send to subscribers, save to emails
+                    if (sendEmailToSubscriber(subscriber, trend))
+                        subscribersArray.push(subscriber.email);
+                });
+            });
+        });
+    }, 60 * 1000, trending, emails, subscribers);
+
+    //scan for emails older than 15mins, type: 'test', blacklisted < Math.ceil(first_responders.length * 0.01)
+    //send to the rest of subscribers, mark type: published.
+    setInterval(function(emails, subscribers)
+    {
+        emails.find({ hashtag: { $exists: true }, type: 'test', created_at: { $lt: new Date(new Date() - 15 * 60 * 1000 ) } }).each(function (err, email)
+        {
+            if (err) throw err;
+            if (email === null)
+                return;
+
+            var update = {};
+            if (email.blacklisted >= Math.ceil(email.tested_subscribers.length * 0.1))
+            {
+                update = { type: 'rejected' };
+            }
+            else
+            {
+                update = { type: 'approved' };
+                // send to the rest
+                subscribers.find().each(function(err, subscriber)
+                {
+                    if (err) throw err;
+
+                    if (subscriber === null)
+                        return;
+                    // not yet sent
+                    if (email.tested_subscribers.indexOf(subscriber.email) === -1)
                     {
-                        var hashtag = trend.hashtag;
-                        pug.renderFile('views/email.pug', {
-                            hashtag: hashtag,
-                            trending_url: helpers.searchUrl(hashtag),
-                            google_url: helpers.googleSearchUrl(hashtag),
-                            twitter_url: helpers.twitterSearchUrl(hashtag)/*, TODO FIXME
-                            blacklist_url: config.url +*/
-                        }, function(err, html) {
-                            if (err)
-                            {
-                                console.error(err);
-                                return false;
-                            }
-                            // format email
-                            var data = {
-                                from: params.config.admin.name +' <'+ params.config.admin.email +'>',
-                                to: params.config.mailgun.mailingList,
-                                subject: 'Looks like ' + trend.hashtag + ' is trending ' + trend.zscore + ' ' + trend.mentions,
-                                html: html
-                            };
-                            // send email
-                            mailgun.messages().send(data, function (err, body) {
-                                if (err)
-                                {
-                                    console.error(err);
-                                    return false;
-                                }
-                                // store email
-                                emails.insertOne({hashtag: trend.hashtag, email: data, created_at: new Date()});
-                            });
-                        });
+                        sendEmailToSubscriber(subscriber, email.trend);
                     }
                 });
             }
+            emails.updateOne({ _id: email._id }, { $set: update }, function(err, updt)
+            {
+                if (err) throw err;
+            });
         });
-    }, 60 * 1000, trending, emails);
+    }, 50 * 1000, emails, subscribers);
+
+
+    // send notifications about links
+    setInterval(function (trending, emails, subscribers)
+    {
+        trending.find({
+            link: { $exists: true },
+            zscore: { $gte: params.config.zScoreLinkEmail },
+            mentions: { $gte: params.config.commonSenseEdgeLink }})
+        .sort( { zscore: -1, mentions: -1 }).limit(10)
+        .each(function(err, trend)
+        {
+            if (err) throw err;
+
+            if (trend === null)
+            {
+                return;
+            }
+            // check if email about this tag was sent recently (last 24h)
+            emails.findOne({ link: trend.link, created_at: { $gt: new Date(new Date() - 24 * 3600 * 1000) }},
+            function (err, doc)
+            {
+                if (err) throw err;
+                if (doc !== null || trend.link === undefined)
+                {
+                    return;
+                }
+
+                var subscribersArray = [];
+
+                // send to random ~10% subscribers, disable for now until we get at least 20-30
+                subscribers.find({ email: 'trendingnow.io@gmail.com' })/*function() { return Math.ceil(Math.random()*10) === 1 }*/
+                .each(function(err, subscriber)
+                {
+                    if (err) throw err;
+
+                    if (subscriber === null) // finished cursor
+                    {
+                        emails.insertOne({
+                            type: 'test',
+                            link: trend.link,
+                            zscore: trend.zscore,
+                            mentions: trend.mentions,
+                            blacklisted: 0,
+                            created_at: new Date(),
+                            tested_subscribers: subscribersArray,
+                            trend: trend
+                        });
+                        return;
+                    }
+
+                    if (sendEmailToSubscriber(subscriber, trend))
+                        subscribersArray.push(subscriber.email);
+                });
+            });
+        });
+    }, 70 * 1000, trending, emails, subscribers);
 };
 
 module.exports = mailer;

@@ -2,6 +2,8 @@
 
 var config = require('./config');
 var helpers = require('./components/helpers');
+var Messenger = require('./components/messenger');
+
 var express = require('express');
 var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
@@ -78,44 +80,103 @@ var searchHashtag = function (hashtags, hashtag, next)
     });
 };
 
-var getHashtagLists = function (trending, hashtags, next)
+var getLists = function (trending, hashtags, links, next)
 {
-    var trends = [];
-    var popular = [];
+    var results = {};
 
-    trending.find().sort( { zscore: -1, mentions: -1 }).limit(10)
-    .each(function(err, trend)
+    var first = function ()
     {
-        if (trend === null)
+        var popularHashtags = [];
+
+        hashtags.find().sort( { mentions: -1 }).limit(10)
+        .each(function(err, doc)
         {
-            hashtags.find().sort( { mentions: -1 }).limit(10)
-            .each(function(err, pop)
+            if (err) throw err;
+
+            if (doc === null)
             {
-                if (pop === null)
-                {
-                    next(trends, popular);
-                }
-                else
-                {
-                    popular.push(pop);
-                }
-            });
-        }
-        else
+                results.popularHashtags = popularHashtags;
+                second();
+            }
+            else
+            {
+                popularHashtags.push(doc);
+            }
+        });
+    },
+    second = function ()
+    {
+        var trendingHashtags = [];
+
+        trending.find({ hashtag: { $exists: true } }).sort( { zscore: -1, mentions: -1 }).limit(10)
+        .each(function(err, doc)
         {
-            trends.push(trend);
-        }
-    });
+            if (err) throw err;
+
+            if (doc === null)
+            {
+                results.trendingHashtags = trendingHashtags;
+                third();
+            }
+            else
+            {
+                trendingHashtags.push(doc);
+            }
+        });
+    },
+    third = function ()
+    {
+        var popularLinks = [];
+
+        links.find().sort( { mentions: -1 }).limit(10)
+        .each(function(err, doc)
+        {
+            if (err) throw err;
+
+            if (doc === null)
+            {
+                results.popularLinks = popularLinks;
+                fourth();
+            }
+            else
+            {
+                popularLinks.push(doc);
+            }
+        });
+    },fourth = function ()
+    {
+        var trendingLinks = [];
+
+        trending.find({ link: { $exists: true } }).sort( { zscore: -1, mentions: -1 }).limit(10)
+        .each(function(err, doc)
+        {
+            if (err) throw err;
+
+            if (doc === null)
+            {
+                results.trendingLinks = trendingLinks;
+                next(results);
+            }
+            else
+            {
+                trendingLinks.push(doc);
+            }
+        });
+    };
+    first();
 };
 
 /*** web server and requests handling ***/
 MongoClient.connect(config.mongodb.url, function (err, db)
 {
-    assert.equal(null, err);
+    if (err) throw err;
+
     var tweetsCol = db.collection('tweets');
     var hashtags = db.collection('hashtags');
     var trending = db.collection('trending');
     var subscribers = db.collection('subscribers');
+    var emails = db.collection('emails');
+    var links = db.collection('links');
 
     /*** web server setup ***/
 
@@ -124,8 +185,10 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
     app.set('view engine', 'pug');
-
     app.use(express.static('public'));
+
+    var messenger = Messenger({ config: config, emails: emails, subscribers: subscribers });
+    var mailgun = new Mailgun(config.mailgun);
 
     app.listen(8080, function () {
         console.log('Listening on port 8080 in ' + process.env.NODE_ENV + ' mode');
@@ -164,9 +227,14 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     //return trending hashtags
     app.get('/', function (req, res)
     {
-        getHashtagLists(trending, hashtags, function(trending, popular)
+        getLists(trending, hashtags, links, function(result)
         {
-            res.render('index', { trendingList: trending, popularList: popular });
+            res.render('index', {
+                trendingHashtagsList: result.trendingHashtags,
+                popularHashtagsList: result.popularHashtags,
+                trendingLinksList: result.trendingLinks,
+                popularLinksList: result.popularLinks
+            });
         });
     });
 
@@ -179,20 +247,28 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         }
         else
         {
-            var mailgun = new Mailgun(config.mailgun);
+            subscribers.findOne( {email: req.body.email }, function (err, result)
+            {
+                if (result === null)
+                {
+                    var confirm_url = helpers.url('subscribers/confirm/', req.body.email);
 
-            var confirm_url = helpers.url('subscribers/confirm/', req.body.email);
-
-            mailgun.messages().send({
-                from: config.admin.name +' <'+ config.admin.email +'>',
-                to: req.body.email,
-                subject: 'Please confirm your subscription to trendingnow.io',
-                html: pug.renderFile('views/email_confirm.pug', {err: err, confirm_url: confirm_url})
-            }, function (err, body) {
-                if (err) {
-                    console.error(err);
+                    mailgun.messages().send({
+                        from: config.admin.name +' <'+ config.admin.email +'>',
+                        to: req.body.email,
+                        subject: 'Please confirm your subscription to trendingnow.io',
+                        html: pug.renderFile('views/email_confirm.pug', {err: err, confirm_url: confirm_url})
+                    }, function (err, body) {
+                        if (err) {
+                            console.log(err);
+                        }
+                        res.render('subscription_requested', { err: err });
+                    });
                 }
-                res.render('subscription_requested', { err: err });
+                else
+                {
+                    res.render('failure', { message: 'You are already subscribed!' });
+                }
             });
         }
     });
@@ -232,9 +308,10 @@ MongoClient.connect(config.mongodb.url, function (err, db)
 
     app.get('/subscribers/:subscriber/blacklist/:item', function (req, res)
     {
-        findSubscriber(req, res, function(subscriber) {
-            var blacklist = subscriber.blacklist === undefined ? [] : subscriber.blacklist;
+        findSubscriber(req, res, function(subscriber)
+        {
             var item = req.params.item;
+            var blacklist = subscriber.blacklist === undefined ? [] : subscriber.blacklist;
 
             if (blacklist.indexOf(item) !== -1)
             {
@@ -242,9 +319,12 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                 return;
             }
 
+            // increase blacklisted count for current testing emails (should be just one but hey)
+            emails.updateOne({ type: 'test', hashtag: item }, { $inc: { blacklisted: 1 } });
+
             blacklist.push(item);
 
-            subscribers.updateOne({ _id: id }, { $set: { blacklist: blacklist, updated_at: new Date() }}, function (err, body) {
+            subscribers.updateOne({ _id: subscriber._id }, { $set: { blacklist: blacklist, updated_at: new Date() }}, function (err, body) {
                 if (err)
                 {
                     console.error(err);
@@ -297,12 +377,10 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     {
         var hashtag = '#hiphop';
         var encoded = encodeURIComponent(hashtag);
-        res.render('email', {
-            hashtag: hashtag,
-            trending_url: config.url + '/keywords/' + encoded,
-            google_url: 'https://www.google.lt/search?q=' + encoded,
-            twitter_url: 'https://twitter.com/search?q=' + encoded
-
+        res.render('email_link', {
+            link: 'abcd',
+            title: 'Nothing good',
+            blacklist_url: helpers.blacklistUrl(123, '456')
         });
     });
 
@@ -366,7 +444,8 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         res.render('about', { title: "about" });
     });
 
-    app.use(function(req, res) {
-        res.status(404).render('404');
+    /*** messenger bot entry point ***/
+    app.post('/bot/messenger', function (req, res) {
+        messenger.entry(req, res);
     });
 });
