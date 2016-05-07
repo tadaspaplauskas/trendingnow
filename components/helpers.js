@@ -36,11 +36,16 @@ helpers.isHashtag = function (hashtag)
   return (hashtag.charAt(0) === '#' && hashtag.length > 4);
 };
 
-helpers.keepValidKeywords = function (keywords, forbidden) //removes links and most common words
+helpers.keepValidKeywords = function (keywords, forbidden, partsForbidden) //removes links and most common words
 {
     return keywords.filter(function(keyword)
     {
-        return (forbidden.indexOf(keyword) === -1 && isNaN(keyword) && keyword.substring(0, 4) !== 'http');
+        return (
+                forbidden.indexOf(keyword) === -1 &&
+                isNaN(keyword) &&
+                keyword.substring(0, 4) !== 'http' &&
+                partsForbidden.filter(function(badWord) { return keyword.indexOf(badWord) !== -1; }).length === 0
+                );
     });
 };
 

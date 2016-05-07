@@ -1,0 +1,18 @@
+{
+  "apps" : [{
+    "name"        : "app",
+    "script"      : "app.js",
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "production"
+    }
+  },
+  {
+    "name"        : "services",
+    "script"      : "services.js",
+    "watch"       : true,
+    "env": {
+        "NODE_ENV": "production"
+    }
+  }]
+}

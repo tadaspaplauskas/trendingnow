@@ -3,7 +3,6 @@ var streamer = function (params)
     var helpers = require('./helpers');
     var tweets = params.tweets;
     var hashtags = params.hashtags;
-    var links = params.links;
 
     twitter = new require('twit')(params.config.twitter);
 
@@ -61,41 +60,11 @@ var streamer = function (params)
     };
     insertHashtags.cache = [];
 
-    var insertLinks = function(links, urls)
-    {
-        var updateObj = {};
-        updateObj['hours.' + helpers.getCurrentHour()] = 1;
-        updateObj.mentions = 1;
-
-        for (var i = 0; i < urls.length; i++)
-        {
-            insertLinks.cache.push({
-                updateOne: {
-                    filter: { link: urls[i].expanded_url },
-                    update: { $inc: updateObj, $set: { updated_at: new Date() } },
-                    upsert: true
-                }
-            });
-        }
-        if (insertLinks.cache.length >= 100)
-        {
-            links.bulkWrite(insertLinks.cache, { ordered: false, w:0 }, function (err, res)
-            {
-                if (err) throw err;
-            });
-            insertLinks.cache = [];
-        }
-    };
-    insertLinks.cache = [];
-
     //remove records older than 24hours
     setInterval(function()
     {
         tweets.remove( { timestamp: { $lt: helpers.timestamp() - 3600 * 24 } }, { w: 0 } ); // keep for 24 hours
-
         hashtags.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } }, { w: 0 } );
-
-        links.remove( { updated_at: { $lt: new Date(new Date() - 24 * 3600 * 1000) } }, { w: 0 } );
     }, 60 * 1000);
 
     // every hour reset current hour's counter
@@ -129,17 +98,12 @@ var streamer = function (params)
             var keywords = [];
 
             keywords = helpers.getLowerCaseKeywordsArray(tweet.text);
-            keywords = helpers.keepValidKeywords(keywords, params.config.forbiddenWords);
+            keywords = helpers.keepValidKeywords(keywords, params.config.forbiddenWords, params.config.filter);
 
             if (keywords.length > 0)
             {
                 insertTweet(tweets, keywords, tweet);
                 insertHashtags(hashtags, keywords);
-            }
-            // save links too
-            if (tweet.entities.urls.length > 0)
-            {
-                insertLinks(links, tweet.entities.urls);
             }
             keywords = null;
         }

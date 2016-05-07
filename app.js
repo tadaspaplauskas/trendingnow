@@ -80,7 +80,7 @@ var searchHashtag = function (hashtags, hashtag, next)
     });
 };
 
-var getLists = function (trending, hashtags, links, next)
+var getLists = function (trending, hashtags, next)
 {
     var results = {};
 
@@ -116,50 +116,11 @@ var getLists = function (trending, hashtags, links, next)
             if (doc === null)
             {
                 results.trendingHashtags = trendingHashtags;
-                third();
-            }
-            else
-            {
-                trendingHashtags.push(doc);
-            }
-        });
-    },
-    third = function ()
-    {
-        var popularLinks = [];
-
-        links.find().sort( { mentions: -1 }).limit(10)
-        .each(function(err, doc)
-        {
-            if (err) throw err;
-
-            if (doc === null)
-            {
-                results.popularLinks = popularLinks;
-                fourth();
-            }
-            else
-            {
-                popularLinks.push(doc);
-            }
-        });
-    },fourth = function ()
-    {
-        var trendingLinks = [];
-
-        trending.find({ link: { $exists: true } }).sort( { zscore: -1, mentions: -1 }).limit(10)
-        .each(function(err, doc)
-        {
-            if (err) throw err;
-
-            if (doc === null)
-            {
-                results.trendingLinks = trendingLinks;
                 next(results);
             }
             else
             {
-                trendingLinks.push(doc);
+                trendingHashtags.push(doc);
             }
         });
     };
@@ -176,8 +137,6 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     var trending = db.collection('trending');
     var subscribers = db.collection('subscribers');
     var emails = db.collection('emails');
-    var links = db.collection('links');
-
     /*** web server setup ***/
 
     var app = express();
@@ -227,13 +186,11 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     //return trending hashtags
     app.get('/', function (req, res)
     {
-        getLists(trending, hashtags, links, function(result)
+        getLists(trending, hashtags, function(result)
         {
             res.render('index', {
                 trendingHashtagsList: result.trendingHashtags,
-                popularHashtagsList: result.popularHashtags,
-                trendingLinksList: result.trendingLinks,
-                popularLinksList: result.popularLinks
+                popularHashtagsList: result.popularHashtags
             });
         });
     });
@@ -377,7 +334,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     {
         var hashtag = '#hiphop';
         var encoded = encodeURIComponent(hashtag);
-        res.render('email_link', {
+        res.render('email_hashtag', {
             link: 'abcd',
             title: 'Nothing good',
             blacklist_url: helpers.blacklistUrl(123, '456')
