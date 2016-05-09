@@ -373,7 +373,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
                         do
                         {
                             i++;
-                            if (i >= 23)
+                            if (i === 24)
                             {
                                 i = 0;
                             }
