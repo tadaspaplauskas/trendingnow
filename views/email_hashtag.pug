@@ -72,7 +72,10 @@ html(xmlns="http://www.w3.org/1999/xhtml" style="font-family: 'Helvetica Neue', 
                       td.content-block(style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;", valign='top')
                         | Looks like&nbsp;
                         strong= hashtag
-                        |  is trending. Maybe it&apos;s worth looking into?
+                        |  is trending (~#{trend.mentions}00 mentions in the last 24 hours).
+                        <!-- z-score #{trend.zscore} -->
+                        |  Maybe it&apos;s worth looking into?
+
                     tr(style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;")
                       td.content-block(itemprop='handler', itemscope='', itemtype='http://schema.org/HttpActionHandler', style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;", valign='top')
 

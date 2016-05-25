@@ -18,6 +18,7 @@ var mailer = function (params)
         {
             pug.renderFile('views/email_hashtag.pug', {
                 hashtag: trend.hashtag,
+                trend: trend,
                 trending_url: helpers.searchUrl(trend.hashtag),
                 google_url: helpers.googleSearchUrl(trend.hashtag),
                 twitter_url: helpers.twitterSearchUrl(trend.hashtag),
@@ -29,7 +30,7 @@ var mailer = function (params)
                 var data = {
                     from: params.config.admin.name +' <'+ params.config.admin.email +'>',
                     to: subscriber.email,
-                    subject: 'Looks like ' + trend.hashtag + ' is trending ' + trend.zscore + ' ' + trend.mentions,
+                    subject: 'Looks like ' + trend.hashtag + ' is trending',
                     html: html
                 };
                 // send email
@@ -58,8 +59,8 @@ var mailer = function (params)
             {
                 return;
             }
-            // check if email about this tag was sent recently (last 24h)
-            emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 24 * 3600 * 1000) }},
+            // check if email about this tag was sent recently (last 49h)
+            emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 49 * 3600 * 1000) }},
             function (err, doc)
             {
                 if (err) throw err;

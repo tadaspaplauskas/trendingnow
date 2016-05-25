@@ -7,7 +7,7 @@ config.url = 'http://trendingnow.io';
 config.admin = { email: 'contact@trendingnow.io',
                 name: 'trendingnow.io'};
 
-config.commonSenseEdgeHashtag = 750; // do not let pass hashtags with less that that amount of mentions. 150; 200;
+config.commonSenseEdgeHashtag = 1000; // do not let pass hashtags with less that that amount of mentions. 150; 200;
 config.zScorePos = 1.95; //2.58; // 1.95;
 config.zScoreNeg = -1.95; //2.58; //-1.95
 config.zScoreHashtagEmail = 3.5;
