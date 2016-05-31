@@ -46,6 +46,12 @@ var mailer = function (params)
     // send try-outs
     setInterval(function (trending, emails, subscribers)
     {
+        // skip if it's only the first minutes of the new hour
+        if (new Date().getMinutes() <= 5)
+        {
+            return;
+        }
+
         trending.find({
             hashtag: { $exists: true },
             zscore: { $gte: params.config.zScoreHashtagEmail },
