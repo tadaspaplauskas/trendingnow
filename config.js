@@ -75,6 +75,10 @@ config.filter = [
 
 // complete words like this are removed
 config.forbiddenWords = [
+'#jobs',
+'#hiring',
+'#gameinsight',
+'#soundcloud',
 '#inspiration',
 'nsfw',
 '#love',

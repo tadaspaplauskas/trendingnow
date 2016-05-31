@@ -5,6 +5,15 @@ block content
         .col-md-4
             include ./subscribe_form.pug
 
+            p
+                h4 Last three emails were about:
+
+                if latestEmails && latestEmails.length > 0
+                    ul.list-inline.fade-in-slower
+                        each email in latestEmails
+                            li.fade-in-slower
+                                a(href='keywords/' + escape(email.hashtag))= email.hashtag
+
         .col-md-4.fade-in-faster
             h2 Trending hashtags
 
@@ -16,6 +25,8 @@ block content
                             | <!-- #{hashtag.zscore} -->
             else
                 p Nothing  show, sorry.
+
+            small (only the top few trends are emailed)
 
         .col-md-4.fade-in-faster
             h2 Popular hashtags

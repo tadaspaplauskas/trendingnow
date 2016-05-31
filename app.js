@@ -80,11 +80,32 @@ var searchHashtag = function (hashtags, hashtag, next)
     });
 };
 
-var getLists = function (trending, hashtags, next)
+var getIndexLists = function (trending, hashtags, emails, next)
 {
     var results = {};
 
-    var first = function ()
+    var getEmails = function()
+    {
+        var latestEmails = [];
+
+        emails.find({ type: 'approved' }).sort( { created_at: -1 }).limit(3)
+        .each(function(err, doc)
+        {
+            if (err) throw err;
+
+            if (doc === null)
+            {
+                results.latestEmails = latestEmails;
+
+                getPopular();
+            }
+            else
+            {
+                latestEmails.push(doc);
+            }
+        });
+    },
+    getPopular = function ()
     {
         var popularHashtags = [];
 
@@ -96,7 +117,8 @@ var getLists = function (trending, hashtags, next)
             if (doc === null)
             {
                 results.popularHashtags = popularHashtags;
-                second();
+
+                getTrending();
             }
             else
             {
@@ -104,7 +126,7 @@ var getLists = function (trending, hashtags, next)
             }
         });
     },
-    second = function ()
+    getTrending = function ()
     {
         var trendingHashtags = [];
 
@@ -116,6 +138,7 @@ var getLists = function (trending, hashtags, next)
             if (doc === null)
             {
                 results.trendingHashtags = trendingHashtags;
+
                 next(results);
             }
             else
@@ -124,7 +147,7 @@ var getLists = function (trending, hashtags, next)
             }
         });
     };
-    first();
+    getEmails();
 };
 
 /*** web server and requests handling ***/
@@ -186,11 +209,12 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     //return trending hashtags
     app.get('/', function (req, res)
     {
-        getLists(trending, hashtags, function(result)
+        getIndexLists(trending, hashtags, emails, function(result)
         {
             res.render('index', {
                 trendingHashtagsList: result.trendingHashtags,
-                popularHashtagsList: result.popularHashtags
+                popularHashtagsList: result.popularHashtags,
+                latestEmails: result.latestEmails
             });
         });
     });
