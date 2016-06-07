@@ -83,7 +83,7 @@ var streamer = function (params)
 
             hashtags.update({}, { $set : update }, { multi: true} );
         }
-    }, 60 * 1000);
+    }, 50 * 1000);
 
     /*** streamer ***/
     var stream = twitter.stream('statuses/sample', { 'language': 'en', 'filter_level': 'low' }); // filter level also a possibility
