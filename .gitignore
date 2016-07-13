@@ -2,3 +2,4 @@ node_modules/
 puphpet/config-custom.yaml
 .vagrant/
 .env
+sftp-config.json
