@@ -22,7 +22,8 @@ var mailer = function (params)
                 trending_url: helpers.searchUrl(trend.hashtag),
                 google_url: helpers.googleSearchUrl(trend.hashtag),
                 twitter_url: helpers.twitterSearchUrl(trend.hashtag),
-                blacklist_url: helpers.blacklistUrl(subscriber._id, trend.hashtag)
+                blacklist_url: helpers.blacklistUrl(subscriber._id, trend.hashtag),
+                subscriber_url: helpers.subscriberUrl(subscriber._id)
             }, function(err, html) {
                 if (err) throw err;
 
@@ -46,8 +47,11 @@ var mailer = function (params)
     // send try-outs
     setInterval(function (trending, emails, subscribers)
     {
+        // take only trends that were updated in the last hour
+        // (this runs every minute, so no reason to walk through the same trends all the time)
         trending.find({
             hashtag: { $exists: true },
+            updated_at: { $gt: new Date(new Date() - 1 * 3600 * 1000) },
             zscore: { $gte: params.config.zScoreHashtagEmail },
             mentions: { $gte: params.config.commonSenseEdgeHashtag } })
         .sort( { zscore: -1, mentions: -1 }).limit(10)
@@ -59,8 +63,8 @@ var mailer = function (params)
             {
                 return;
             }
-            // check if email about this tag was sent recently (last 49h)
-            emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 49 * 3600 * 1000) }},
+            // check if email about this tag was sent recently (last 12h)
+            emails.findOne({ hashtag: trend.hashtag, created_at: { $gt: new Date(new Date() - 12 * 3600 * 1000) }},
             function (err, doc)
             {
                 if (err) throw err;

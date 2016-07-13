@@ -2,7 +2,6 @@
 
 var config = require('./config');
 var helpers = require('./components/helpers');
-var Messenger = require('./components/messenger');
 
 var express = require('express');
 var mongodb = require('mongodb');
@@ -169,11 +168,10 @@ MongoClient.connect(config.mongodb.url, function (err, db)
     app.set('view engine', 'pug');
     app.use(express.static('public'));
 
-    var messenger = Messenger({ config: config, emails: emails, subscribers: subscribers });
     var mailgun = new Mailgun(config.mailgun);
 
-    app.listen(8080, function () {
-        console.log('Listening on port 8080 in ' + process.env.NODE_ENV + ' mode');
+    app.listen(3001, function () {
+        console.log('Listening on port 3001 in ' + process.env.NODE_ENV + ' mode');
     });
 
     // local helpers
@@ -356,12 +354,14 @@ MongoClient.connect(config.mongodb.url, function (err, db)
 
     app.get('/email', function (reg, res)
     {
-        var hashtag = '#hiphop';
+        var hashtag = '#trump';
         var encoded = encodeURIComponent(hashtag);
         res.render('email_hashtag', {
             link: 'abcd',
             title: 'Nothing good',
-            blacklist_url: helpers.blacklistUrl(123, '456')
+            trend: { mentions: 123 },
+            blacklist_url: helpers.blacklistUrl(123, '456'),
+            subscriber_url: helpers.subscriberUrl(123)
         });
     });
 
@@ -425,8 +425,4 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         res.render('about', { title: "about" });
     });
 
-    /*** messenger bot entry point ***/
-    app.post('/bot/messenger', function (req, res) {
-        messenger.entry(req, res);
-    });
 });

@@ -120,4 +120,9 @@ helpers.blacklistUrl = function (subscriberId, keyword)
     return 'http://trendingnow.io/subscribers/'+ encodeURIComponent(subscriberId) +'/blacklist/' + encodeURIComponent(keyword);
 };
 
+helpers.subscriberUrl = function (subscriberId)
+{
+    return 'http://trendingnow.io/subscribers/'+ encodeURIComponent(subscriberId);
+};
+
 module.exports = helpers;
