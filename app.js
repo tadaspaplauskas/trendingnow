@@ -188,7 +188,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
             return;
         }
 
-        subscribers.findOne( { _id: id }, function (err, subscriber)
+        subscribers.findOne( { _id: id, subscribed: true }, function (err, subscriber)
         {
             if (subscriber === null || err)
             {
@@ -226,7 +226,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         }
         else
         {
-            subscribers.findOne( {email: req.body.email }, function (err, result)
+            subscribers.findOne( {email: req.body.email, subscribed: true }, function (err, result)
             {
                 if (result === null)
                 {
@@ -261,11 +261,11 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         }
         else
         {
-            subscribers.findOne( {email: req.params.email }, function (err, result)
+            subscribers.findOne( {email: req.params.email, subscribed: true }, function (err, result)
             {
                 if (result === null)
                 {
-                    subscribers.insertOne({email: req.params.email, created_at: new Date() }, function (err, body) {
+                    subscribers.insertOne({email: req.params.email, subscribed: true, created_at: new Date() }, function (err, body) {
                         if (err)
                         {
                             console.error(err);
@@ -342,6 +342,21 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         });
     });
 
+    app.get('/subscribers/:subscriber/unsubscribe', function (req, res)
+    {
+        findSubscriber(req, res, function(subscriber) {
+            subscribers.updateOne( { _id: subscriber._id }, { $set: { subscribed: false } }, function (err)
+            {
+                if (err) throw err;
+
+                res.render('unsubscribed', {
+                    title: 'Unsubscribed',
+                    subscriber: subscriber
+                });
+            });
+        });
+    });
+
     app.get('/subscribers/:subscriber', function (req, res)
     {
         findSubscriber(req, res, function(subscriber) {
@@ -352,6 +367,7 @@ MongoClient.connect(config.mongodb.url, function (err, db)
         });
     });
 
+    // just for testing email template
     app.get('/email', function (reg, res)
     {
         var hashtag = '#trump';
@@ -361,7 +377,8 @@ MongoClient.connect(config.mongodb.url, function (err, db)
             title: 'Nothing good',
             trend: { mentions: 123 },
             blacklist_url: helpers.blacklistUrl(123, '456'),
-            subscriber_url: helpers.subscriberUrl(123)
+            subscriber_url: helpers.subscriberUrl(123),
+            unsubscribe_url: helpers.subscriberUrl(123) + '/unsubscribe'
         });
     });
 

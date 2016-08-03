@@ -23,7 +23,8 @@ var mailer = function (params)
                 google_url: helpers.googleSearchUrl(trend.hashtag),
                 twitter_url: helpers.twitterSearchUrl(trend.hashtag),
                 blacklist_url: helpers.blacklistUrl(subscriber._id, trend.hashtag),
-                subscriber_url: helpers.subscriberUrl(subscriber._id)
+                subscriber_url: helpers.subscriberUrl(subscriber._id),
+                unsubscribe_url: helpers.subscriberUrl(subscriber._id) + '/unsubscribe'
             }, function(err, html) {
                 if (err) throw err;
 
@@ -76,7 +77,7 @@ var mailer = function (params)
                 var subscribersArray = [];
 
                 // send to random ~10% subscribers, disable for now until we get at least 20-30
-                subscribers.find({ email: 'trendingnow.io@gmail.com' })/*function() { return Math.ceil(Math.random()*10) === 1 }*/
+                subscribers.find({ subscribed: true, email: 'trendingnow.io@gmail.com' })/*function() { return Math.ceil(Math.random()*10) === 1 }*/
                 .each(function(err, subscriber)
                 {
                     if (err) throw err;
@@ -122,7 +123,7 @@ var mailer = function (params)
             {
                 update = { type: 'approved' };
                 // send to the rest
-                subscribers.find().each(function(err, subscriber)
+                subscribers.find( { subscribed: true }).each(function(err, subscriber)
                 {
                     if (err) throw err;
 
