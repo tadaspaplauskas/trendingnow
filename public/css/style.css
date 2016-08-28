@@ -6,6 +6,9 @@ body {
     font-size: 20px;
 }
 
+input-group {
+    max-width: 22em;
+}
 .logo {
     font-style: italic;
     font-weight: bold;
